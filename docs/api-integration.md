@@ -87,6 +87,81 @@ GET /api/v1/events
 
 Devuelve `200` con la lista de eventos creados en el proceso actual.
 
+## Probar la API
+
+### Prueba local del backend
+
+Con Uvicorn ejecutándose en una terminal:
+
+```bash
+curl --fail http://127.0.0.1:8000/health
+curl --fail http://127.0.0.1:8000/ready
+```
+
+Crear un evento:
+
+```bash
+curl --fail --request POST http://127.0.0.1:8000/api/v1/events \
+  --header 'content-type: application/json' \
+  --data '{
+    "name": "Asado de prueba",
+    "creator": {
+      "user_id": "11111111-1111-4111-8111-111111111111",
+      "display_name": "Joaco"
+    }
+  }'
+```
+
+Listarlo:
+
+```bash
+curl --fail http://127.0.0.1:8000/api/v1/events
+```
+
+También se puede usar Swagger en `http://127.0.0.1:8000/docs`.
+
+### Prueba desde la máquina de la coordinación
+
+1. En la máquina que ejecuta FastAPI, obtené la IP LAN:
+
+   ```bash
+   hostname -I
+   ```
+
+2. Levantá el backend escuchando en la red:
+
+   ```bash
+   cd backend
+   uv run uvicorn patopay.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+3. Desde la máquina de la coordinación, reemplazá `API_HOST` por esa IP:
+
+   ```bash
+   curl --fail http://API_HOST:8000/health
+   curl --fail http://API_HOST:8000/ready
+   ```
+
+4. Abrí en su navegador:
+
+   ```text
+   http://API_HOST:8000/docs
+   ```
+
+5. En `frontend/.env`, debe usar:
+
+   ```dotenv
+   EXPO_PUBLIC_PATOPAY_API_URL=http://API_HOST:8000
+   ```
+
+Si usa Expo en un dispositivo físico, el teléfono y la computadora deben estar
+conectados a la misma red y el firewall debe permitir el puerto `8000`.
+
+> Esta fase todavía usa `InMemoryEventService`: los eventos no se guardan en
+> Supabase y se pierden al reiniciar Uvicorn. `/ready` sólo confirma que el
+> backend puede conectarse a PostgreSQL; la persistencia real de eventos viene
+> en la siguiente slice.
+
 ## Frontend
 
 El frontend debe leer estas variables desde `frontend/.env`:
