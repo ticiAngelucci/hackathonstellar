@@ -20,5 +20,10 @@ npx expo start
 ## Backend futuro
 Las vistas consumen interfaces de servicios. Reemplazá `mockServices.ts` por una implementación HTTP sin reescribir las screens.
 
+## Backend local
+
+La guía para levantar y probar la API FastAPI está en
+[`BACKEND_INTEGRATION.md`](./BACKEND_INTEGRATION.md).
+
 ## Flujos incluidos
 Onboarding, home, grupos, fondo común/staking, servicios automáticos, permisos, payment request, success, actividad y perfil.
