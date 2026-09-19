@@ -1,0 +1,1 @@
+import {Image,ImageStyle,StyleProp} from 'react-native'; export function PatoAvatar({size=54,style}:{size?:number;style?:StyleProp<ImageStyle>}){return <Image source={require('../../assets/pato.png')} resizeMode="cover" style={[{width:size,height:size,borderRadius:size/2},style]}/>;}
