@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "supabase": "2.117.0"
+  },
+  "name": "patopay-tooling",
+  "private": "true"
+}

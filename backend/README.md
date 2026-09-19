@@ -125,3 +125,27 @@ HTTP route
 El backend todavía no incluye persistencia, autenticación, cálculo real de balances,
 gastos, disputas, x402, Stellar ni agentes autónomos. Esas integraciones se agregarán
 por fases.
+
+### Configuración para el frontend y Supabase
+
+La configuración pública de la primera integración está en `backend/.env.example`.
+El proyecto Supabase objetivo es:
+
+```text
+https://ekgfskibieqljhazchno.supabase.co
+```
+
+La API permite CORS desde `http://localhost:8081` y
+`http://127.0.0.1:8081`, que son los orígenes usados por Expo durante desarrollo.
+La documentación de contrato para la coordinación está en
+`docs/api-integration.md`.
+
+El CLI de Supabase está fijado en la raíz del repositorio. Para enlazar el checkout
+con el proyecto remoto hace falta autenticarse en la sesión del desarrollador:
+
+```bash
+npx supabase login
+npx supabase link --project-ref ekgfskibieqljhazchno
+```
+
+No se guardan access tokens, contraseñas ni archivos `.env` en Git.

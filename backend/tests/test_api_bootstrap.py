@@ -1,0 +1,27 @@
+from httpx import ASGITransport, AsyncClient
+
+from patopay.main import create_app
+
+
+async def test_api_exposes_event_contract_and_frontend_cors() -> None:
+    app = create_app()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        preflight = await client.options(
+            "/api/v1/events",
+            headers={
+                "Origin": "http://localhost:8081",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        openapi = await client.get("/openapi.json")
+
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "http://localhost:8081"
+    assert sorted(openapi.json()["paths"]) == [
+        "/api/v1/events",
+        "/health",
+    ]

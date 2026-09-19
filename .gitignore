@@ -13,3 +13,12 @@ build/
 .idea/
 .vscode/
 .DS_Store
+
+# Local dependencies and environment files
+node_modules/
+frontend/node_modules/
+.expo/
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
