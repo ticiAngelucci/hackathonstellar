@@ -24,4 +24,5 @@ async def test_api_exposes_event_contract_and_frontend_cors() -> None:
     assert sorted(openapi.json()["paths"]) == [
         "/api/v1/events",
         "/health",
+        "/ready",
     ]

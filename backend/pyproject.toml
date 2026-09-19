@@ -13,6 +13,8 @@ dependencies = [
   "pydantic-settings>=2.10,<3",
   "uvicorn[standard]>=0.35,<1",
   "typing-extensions>=4.14,<5",
+  "sqlalchemy[asyncio]>=2.0,<2.1",
+  "psycopg[binary]>=3.2,<4",
 ]
 
 [dependency-groups]

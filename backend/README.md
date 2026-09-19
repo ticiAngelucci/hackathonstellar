@@ -99,6 +99,10 @@ que responde:
 }
 ```
 
+La API también expone `GET /ready`, que verifica la conexión PostgreSQL
+configurada y devuelve `200` sólo cuando la base responde. Si todavía no existe
+`backend/.env` o falta `PATOPAY_DATABASE_URL`, devuelve `503`.
+
 ### Segunda fase: eventos en memoria
 
 Endpoints disponibles:

@@ -18,7 +18,11 @@ cp .env.example .env
 uv run uvicorn patopay.main:app --reload
 ```
 
-La API actual es una primera integración en memoria: reiniciar Uvicorn borra los eventos. La persistencia PostgreSQL y la autenticación JWT son la siguiente slice del plan; todavía no se debe enviar esta API sin autenticación a producción.
+La API actual sigue usando memoria para los eventos: reiniciar Uvicorn borra los
+registros. La configuración y el pool SQLAlchemy para PostgreSQL ya están
+implementados, pero la persistencia de eventos y la autenticación JWT son las
+siguientes slices. Todavía no se debe enviar esta API sin autenticación a
+producción.
 
 ## Contrato actual
 
@@ -27,6 +31,16 @@ La API actual es una primera integración en memoria: reiniciar Uvicorn borra lo
 ```http
 GET /health
 ```
+
+### Readiness
+
+```http
+GET /ready
+```
+
+Devuelve `200` con `{"status":"ready"}` únicamente cuando la conexión
+PostgreSQL configurada responde. Si falta `PATOPAY_DATABASE_URL` o la base no
+está disponible, devuelve `503`.
 
 ### Crear evento
 
