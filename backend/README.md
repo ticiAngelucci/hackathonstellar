@@ -99,4 +99,29 @@ que responde:
 }
 ```
 
-El backend todavía no incluye persistencia, autenticación, cálculo real de balances, x402, Stellar ni agentes LLM. Esas integraciones se agregarán por fases.
+### Segunda fase: eventos en memoria
+
+Endpoints disponibles:
+
+```http
+POST /api/v1/events
+GET /api/v1/events
+```
+
+El creador enviado en `POST /api/v1/events` se agrega automáticamente como el
+primer participante. Los eventos viven en `InMemoryEventService` y se pierden
+al reiniciar el proceso.
+
+La conexión actual es:
+
+```text
+HTTP route
+  -> EventResponse / CreateEventRequest
+  -> EventService protocol
+  -> InMemoryEventService
+  -> Event / Participant domain models
+```
+
+El backend todavía no incluye persistencia, autenticación, cálculo real de balances,
+gastos, disputas, x402, Stellar ni agentes autónomos. Esas integraciones se agregarán
+por fases.
