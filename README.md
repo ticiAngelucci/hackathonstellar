@@ -10,7 +10,7 @@ PatoPay es una app móvil que busca solucionar problemas a la hora de dividir ga
 ## Estética
 Bien bostero, simple, que los usuarios no tengan que conocer de web3, cyber neon con acentos de boca, el pato como mascota principal
 ## Flujo de la app
-
+<img width="2400" height="1500" alt="patopay-architecture" src="https://github.com/user-attachments/assets/34e3de71-43df-4905-94fd-4a9f31a32508" />
 ## Capa de cliente
 La capa de cliente es la interfaz con la que interactúan los usuarios y sus agentes. La Web App, construida con Next.js y TypeScript, permite crear eventos, invitar participantes, registrar gastos, revisar balances y aprobar o rechazar solicitudes de pago. El Wallet / Agent Client representa a los agentes organizadores e invitados, y se encarga de aplicar las reglas configuradas por cada usuario y firmar las autorizaciones de pago. El usuario puede operar en modo manual, asistido o autónomo, dependiendo del nivel de control que quiera darle a su agente.
 ## PatoPay Core
