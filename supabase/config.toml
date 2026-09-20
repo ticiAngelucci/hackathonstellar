@@ -174,7 +174,7 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
@@ -241,6 +241,11 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# The Testnet relayer always requires a valid Supabase user JWT. The mobile app
+# creates an anonymous Supabase session; this is unrelated to the wallet signer.
+[functions.stellar-relayer]
+verify_jwt = true
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

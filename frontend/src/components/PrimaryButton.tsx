@@ -1,1 +1,61 @@
-import {Pressable,StyleSheet,Text} from 'react-native'; import {colors,radius} from '@/constants/theme'; export function PrimaryButton({title,onPress,variant='primary'}:{title:string;onPress:()=>void;variant?:'primary'|'secondary'|'danger'}){return <Pressable onPress={onPress} style={({pressed})=>[s.base,s[variant],pressed&&{opacity:.82,transform:[{scale:.99}]}]}><Text style={[s.text,variant!=='primary'&&s.light]}>{title}</Text></Pressable>} const s=StyleSheet.create({base:{minHeight:54,borderRadius:radius.pill,alignItems:'center',justifyContent:'center',paddingHorizontal:20},primary:{backgroundColor:colors.yellow},secondary:{backgroundColor:'transparent',borderWidth:1,borderColor:colors.border},danger:{backgroundColor:'transparent',borderWidth:1,borderColor:colors.danger},text:{color:colors.black,fontSize:16,fontWeight:'800'},light:{color:colors.text}});
+import {Ionicons} from '@expo/vector-icons';
+import {Pressable,StyleProp,StyleSheet,Text,ViewStyle} from 'react-native';
+import Animated,{useAnimatedStyle,useSharedValue,withSpring} from 'react-native-reanimated';
+import {colors,radius,spacing,typography} from '@/constants/theme';
+
+type PrimaryButtonProps={
+  title:string;
+  onPress:()=>void;
+  icon?:keyof typeof Ionicons.glyphMap;
+  style?:StyleProp<ViewStyle>;
+  disabled?:boolean;
+  variant?:'primary'|'secondary'|'danger';
+};
+
+const AnimatedPressable=Animated.createAnimatedComponent(Pressable);
+
+export function PrimaryButton({title,onPress,icon,style,disabled=false,variant='primary'}:PrimaryButtonProps){
+  const outlined=variant!=='primary';
+  const scale=useSharedValue(1);
+  const animatedStyle=useAnimatedStyle(()=>({transform:[{scale:scale.value}]}));
+
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityState={{disabled}}
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={()=>{scale.value=withSpring(.98,{damping:18,stiffness:260});}}
+      onPressOut={()=>{scale.value=withSpring(1,{damping:18,stiffness:260});}}
+      style={[
+        styles.base,
+        styles[variant],
+        style,
+        disabled&&styles.disabled,
+        animatedStyle,
+      ]}
+    >
+      {icon&&<Ionicons name={icon} size={19} color={outlined?colors.text:colors.black}/>}
+      <Text style={[styles.text,outlined&&styles.light]}>{title}</Text>
+    </AnimatedPressable>
+  );
+}
+
+const styles=StyleSheet.create({
+  base:{
+    width:'100%',
+    minHeight:54,
+    borderRadius:radius.pill,
+    alignItems:'center',
+    justifyContent:'center',
+    flexDirection:'row',
+    gap:spacing.xs,
+    paddingHorizontal:spacing.lg,
+  },
+  primary:{backgroundColor:colors.yellow},
+  secondary:{backgroundColor:colors.transparent,borderWidth:1,borderColor:colors.border},
+  danger:{backgroundColor:colors.transparent,borderWidth:1,borderColor:colors.danger},
+  disabled:{opacity:.5},
+  text:{...typography.bodyStrong,color:colors.black,fontWeight:'900'},
+  light:{color:colors.text},
+});

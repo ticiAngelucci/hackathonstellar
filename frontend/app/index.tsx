@@ -1,2 +1,79 @@
-import {router} from 'expo-router'; import {Image,StyleSheet,Text,View} from 'react-native'; import {Screen} from '@/components/Screen'; import {PrimaryButton} from '@/components/PrimaryButton'; import {colors} from '@/constants/theme'; export default function Onboarding(){return <Screen scroll={false} contentStyle={s.screen}><View style={s.top}><Image source={require('../assets/pato.png')} style={s.pato} resizeMode="contain"/><Text style={s.brand}>PATO PAY</Text><Text style={s.title}>Tu agente{`
-`}de pagos</Text><Text style={s.sub}>Organizá, pagá y dejá que Pato se encargue del resto.</Text></View><View style={{gap:14}}><PrimaryButton title="Comenzar" onPress={()=>router.replace('/(tabs)')}/><Text style={s.note}>Prototype • Stellar Testnet</Text></View></Screen>} const s=StyleSheet.create({screen:{padding:24,justifyContent:'space-between'},top:{flex:1,justifyContent:'center'},pato:{width:220,height:220,alignSelf:'center',marginBottom:20},brand:{color:colors.yellow,fontWeight:'900',letterSpacing:2},title:{color:colors.text,fontSize:48,lineHeight:50,fontWeight:'900',marginTop:10},sub:{color:colors.muted,fontSize:18,lineHeight:26,marginTop:18,maxWidth:330},note:{color:colors.muted,textAlign:'center',fontSize:12}});
+import {useEffect} from 'react';
+import {router} from 'expo-router';
+import {Pressable,StyleSheet,Text,View,useWindowDimensions} from 'react-native';
+import {Screen} from '@/components/Screen';
+import {PrimaryButton} from '@/components/PrimaryButton';
+import {PatoHero} from '@/components/PatoHero';
+import {hasCompletedOnboarding,markOnboardingCompleted} from '@/features/onboarding/services/onboardingStorage';
+import {walletMode,walletService} from '@/services/wallet';
+import {colors,spacing,typography} from '@/constants/theme';
+
+export default function Onboarding(){
+  const {width,height}=useWindowDimensions();
+  const compact=height<700;
+  const heroSize=Math.min(width-spacing.xxxl,compact?212:292);
+
+  useEffect(()=>{
+    let active=true;
+    hasCompletedOnboarding().then(async completed=>{
+      if(!active||!completed)return;
+      const account=walletMode==='stellar'?await walletService.getAccount().catch(()=>null):null;
+      if(active)router.replace(walletMode==='stellar'&&!account?'/onboarding/name':'/(tabs)');
+    }).catch(()=>{});
+    return ()=>{active=false;};
+  },[]);
+
+  const enterExistingAccount=async()=>{
+    if(walletMode==='stellar'){
+      const account=await walletService.getAccount().catch(()=>null);
+      if(!account){
+        router.push('/onboarding/name');
+        return;
+      }
+    }
+    await markOnboardingCompleted();
+    router.replace('/(tabs)');
+  };
+
+  return (
+    <Screen scroll={false} contentStyle={[styles.screen,compact&&styles.compactScreen]}>
+      <View style={styles.content}>
+        <PatoHero size={heroSize} style={styles.pato}/>
+        <Text style={[styles.title,compact&&styles.compactTitle]}>
+          Tu agente{`\n`}
+          <Text style={styles.titleAccent}>de pagos</Text>
+        </Text>
+        <Text style={styles.sub}>Organizá, pagá y dejá{`\n`}que Pato se encargue{`\n`}del resto.</Text>
+      </View>
+
+      <View style={styles.footer}>
+        <View style={styles.indicators}>
+          <View style={[styles.dot,styles.activeDot]}/>
+          <View style={styles.dot}/>
+          <View style={styles.dot}/>
+        </View>
+        <PrimaryButton title="Comenzar" onPress={()=>router.push('/onboarding')}/>
+        <Pressable onPress={()=>void enterExistingAccount()} style={({pressed})=>pressed&&styles.pressed}>
+          <Text style={styles.login}>Ya tengo una cuenta</Text>
+        </Pressable>
+      </View>
+    </Screen>
+  );
+}
+
+const styles=StyleSheet.create({
+  screen:{paddingHorizontal:spacing.xl,paddingTop:spacing.sm,paddingBottom:spacing.sm,justifyContent:'space-between'},
+  compactScreen:{paddingTop:0},
+  content:{alignItems:'flex-start'},
+  pato:{alignSelf:'center',marginBottom:spacing.xs},
+  title:{...typography.hero,color:colors.text,fontSize:38,lineHeight:39,letterSpacing:-.6},
+  compactTitle:{fontSize:34,lineHeight:35},
+  titleAccent:{color:colors.yellow},
+  sub:{...typography.body,color:colors.text,marginTop:spacing.sm},
+  footer:{gap:spacing.sm,alignItems:'center'},
+  indicators:{height:8,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6},
+  dot:{width:6,height:6,borderRadius:3,backgroundColor:colors.border},
+  activeDot:{width:18,backgroundColor:colors.yellow},
+  login:{...typography.caption,color:colors.blueBright,textAlign:'center',fontWeight:'600'},
+  pressed:{opacity:.65},
+});

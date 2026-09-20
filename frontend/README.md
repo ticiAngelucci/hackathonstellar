@@ -1,24 +1,26 @@
-# Pato Pay — prototipo mobile
+# Pato Pay — app mobile
 
-App demo navegable para la hackathon.
+Frontend Expo de Pato Pay con Stellar Testnet, smart wallet con passkey y modo
+mock optativo para desarrollo visual.
 
 **Stack:** Expo + React Native + TypeScript + Expo Router + Reanimated.
 
-```bash
-npm install
-npx expo start
-```
+La integración y los comandos completos están en
+[`STELLAR_INTEGRATION.md`](./STELLAR_INTEGRATION.md).
 
 ## Arquitectura
 - `app/`: navegación y screens
 - `src/components/`: componentes reutilizables
-- `src/services/`: frontera de datos; hoy mock, mañana FastAPI
-- `src/data/`: fixtures
+- `src/services/`: Stellar, wallet, Supabase y seguridad local
 - `src/types/`: modelos compartidos
 - `assets/`: mascota
 
-## Backend futuro
-Las vistas consumen interfaces de servicios. Reemplazá `mockServices.ts` por una implementación HTTP sin reescribir las screens.
+## Modos de wallet
+
+- `stellar` (default): smart wallet real en Stellar Testnet, firmada con passkey.
+- `mock`: fallback explícito para trabajar sólo la interfaz.
+
+Face ID/Touch ID protege el acceso a la app y nunca firma operaciones Stellar.
 
 ## Backend local
 

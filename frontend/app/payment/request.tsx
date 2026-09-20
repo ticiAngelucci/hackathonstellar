@@ -1,2 +1,38 @@
-import {router} from 'expo-router'; import {Ionicons} from '@expo/vector-icons'; import {StyleSheet,Text,View} from 'react-native'; import {Screen} from '@/components/Screen'; import {PatoAvatar} from '@/components/PatoAvatar'; import {PrimaryButton} from '@/components/PrimaryButton'; import {colors} from '@/constants/theme'; export default function Request(){return <Screen><View style={s.card}><View style={s.icon}><Ionicons name="restaurant" size={28} color={colors.text}/></View><Text style={s.title}>Asado del viernes</Text><Text style={s.muted}>Te pidieron</Text><Text style={s.amount}>10.00 <Text style={s.asset}>USDC</Text></Text><Text style={s.message}>“Te agregaron al asado.{`
-`}¿Pagamos tu parte?”</Text><Text style={s.members}>👨‍🦰 👩‍🦱 👨🏻‍🦱  •  5 personas</Text></View><View style={s.pato}><PatoAvatar size={120}/></View><View style={{gap:12}}><PrimaryButton title="Aprobar y pagar" onPress={()=>router.push('/payment/success')}/><PrimaryButton title="Rechazar" variant="secondary" onPress={()=>router.back()}/></View></Screen>} const s=StyleSheet.create({card:{backgroundColor:colors.surface,borderRadius:24,padding:24,alignItems:'center',borderWidth:1,borderColor:colors.border},icon:{width:56,height:56,borderRadius:18,backgroundColor:colors.blue,alignItems:'center',justifyContent:'center'},title:{color:colors.text,fontSize:24,fontWeight:'900',marginTop:16},muted:{color:colors.muted,marginTop:6},amount:{color:colors.text,fontSize:42,fontWeight:'900',marginTop:18},asset:{fontSize:20},message:{color:colors.text,textAlign:'center',fontSize:18,lineHeight:26,marginTop:18},members:{color:colors.muted,marginTop:18},pato:{alignItems:'center',marginVertical:18}});
+import {router} from 'expo-router';
+import {Ionicons} from '@expo/vector-icons';
+import {Image,StyleSheet,Text,View} from 'react-native';
+import Animated,{FadeInDown} from 'react-native-reanimated';
+import {Screen} from '@/components/Screen';
+import {AppHeader} from '@/components/AppHeader';
+import {PrimaryButton} from '@/components/PrimaryButton';
+import {colors,radius,spacing,typography} from '@/constants/theme';
+
+export default function Request(){
+  return (
+    <Screen>
+      <AppHeader title="Solicitud de pago"/>
+      <Animated.View entering={FadeInDown.duration(320)} style={styles.emptyCard}>
+        <View style={styles.icon}><Ionicons name="receipt-outline" size={26} color={colors.yellow}/></View>
+        <Text style={styles.title}>No hay solicitudes pendientes</Text>
+        <Text style={styles.copy}>Cuando llegue una solicitud real desde Supabase, vas a poder revisarla y aprobarla acá.</Text>
+        <Image
+          source={require('../../assets/pato/pato-approval.png')}
+          style={styles.pato}
+          resizeMode="contain"
+        />
+      </Animated.View>
+      <View style={styles.buttons}>
+        <PrimaryButton title="Volver" onPress={()=>router.back()}/>
+      </View>
+    </Screen>
+  );
+}
+
+const styles=StyleSheet.create({
+  emptyCard:{alignItems:'center',padding:spacing.lg,borderRadius:radius.lg,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border},
+  icon:{width:54,height:54,borderRadius:radius.md,alignItems:'center',justifyContent:'center',backgroundColor:colors.bgSoft},
+  title:{...typography.h2,color:colors.text,textAlign:'center',marginTop:spacing.md},
+  copy:{...typography.small,color:colors.muted,textAlign:'center',marginTop:spacing.xs,maxWidth:300},
+  pato:{width:158,height:158,alignSelf:'center',marginTop:spacing.sm,marginBottom:-spacing.md},
+  buttons:{gap:spacing.sm},
+});

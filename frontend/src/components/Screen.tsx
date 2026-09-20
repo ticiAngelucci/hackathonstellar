@@ -1,28 +1,34 @@
 import {useMinimizeOnScroll} from 'expo-glass-tabs';
 import {PropsWithChildren} from 'react';
-import {StyleSheet, ViewStyle} from 'react-native';
+import {StyleProp,StyleSheet,View,ViewStyle} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
-import {colors} from '@/constants/theme';
+import {colors,spacing} from '@/constants/theme';
 
-export function Screen({
-  children,
-  scroll = true,
-  contentStyle,
-}: PropsWithChildren<{scroll?: boolean; contentStyle?: ViewStyle}>) {
-  const onScroll = useMinimizeOnScroll();
+type ScreenProps=PropsWithChildren<{
+  scroll?:boolean;
+  contentStyle?:StyleProp<ViewStyle>;
+}>;
 
-  if (!scroll) {
-    return <SafeAreaView style={[s.safe, contentStyle]}>{children}</SafeAreaView>;
+export function Screen({children,scroll=true,contentStyle}:ScreenProps){
+  const onScroll=useMinimizeOnScroll();
+
+  if(!scroll){
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={[styles.content,styles.fixed,contentStyle]}>{children}</View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={styles.safe}>
       <Animated.ScrollView
-        contentContainerStyle={[s.content, contentStyle]}
+        contentContainerStyle={[styles.content,contentStyle]}
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {children}
       </Animated.ScrollView>
@@ -30,7 +36,8 @@ export function Screen({
   );
 }
 
-const s = StyleSheet.create({
-  safe: {flex: 1, backgroundColor: colors.bg},
-  content: {padding: 20, paddingBottom: 140},
+const styles=StyleSheet.create({
+  safe:{flex:1,backgroundColor:colors.bg},
+  content:{paddingHorizontal:spacing.lg,paddingTop:spacing.sm,paddingBottom:140},
+  fixed:{flex:1,paddingBottom:spacing.xxl},
 });

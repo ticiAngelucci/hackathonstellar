@@ -1,1 +1,97 @@
-import {useState} from 'react'; import {Ionicons} from '@expo/vector-icons'; import {StyleSheet,Switch,Text,View} from 'react-native'; import {Screen} from '@/components/Screen'; import {services as initial} from '@/data/mockData'; import {colors} from '@/constants/theme'; export default function Services(){const [items,setItems]=useState(initial); const toggle=(id:string)=>setItems(p=>p.map(x=>x.id===id?{...x,enabled:!x.enabled}:x)); return <Screen><Text style={s.title}>Servicios automáticos</Text><Text style={s.sub}>Conectá tus servicios y Pato los paga automáticamente por vos.</Text><View style={s.list}>{items.map(x=><View key={x.id} style={s.row}><View style={s.icon}><Ionicons name={x.icon as any} size={22} color={colors.yellow}/></View><View style={{flex:1}}><Text style={s.name}>{x.name}</Text><Text style={s.price}>{x.amount.toFixed(2)} USDC/mes</Text></View><Switch value={x.enabled} onValueChange={()=>toggle(x.id)} trackColor={{false:colors.border,true:colors.yellow}} thumbColor={x.enabled?colors.black:colors.muted}/></View>)}</View></Screen>} const s=StyleSheet.create({title:{color:colors.text,fontSize:32,fontWeight:'900'},sub:{color:colors.muted,lineHeight:21,marginTop:8},list:{marginTop:24,backgroundColor:colors.surface,borderRadius:22,overflow:'hidden',borderWidth:1,borderColor:colors.border},row:{flexDirection:'row',alignItems:'center',padding:16,borderBottomWidth:1,borderBottomColor:colors.border,gap:12},icon:{width:44,height:44,borderRadius:14,backgroundColor:colors.bgSoft,alignItems:'center',justifyContent:'center'},name:{color:colors.text,fontWeight:'800'},price:{color:colors.muted,fontSize:12,marginTop:4}});
+import {useEffect,useState} from 'react';
+import {ActivityIndicator,StyleSheet,Text,View} from 'react-native';
+import Animated,{FadeInDown} from 'react-native-reanimated';
+import {Screen} from '@/components/Screen';
+import {AppHeader} from '@/components/AppHeader';
+import {PatoAgent} from '@/components/PatoAgent';
+import {ServiceRow} from '@/components/ServiceRow';
+import {serviceCatalog} from '@/constants/serviceCatalog';
+import {subscriptionService} from '@/services/appDataService';
+import {colors,radius,spacing,typography} from '@/constants/theme';
+
+export default function Services(){
+  const [items,setItems]=useState(serviceCatalog);
+  const [loading,setLoading]=useState(true);
+  const [savingId,setSavingId]=useState<string|null>(null);
+  const [error,setError]=useState<string|null>(null);
+
+  useEffect(()=>{
+    let active=true;
+    subscriptionService.list()
+      .then(states=>{
+        if(!active)return;
+        setItems(serviceCatalog.map(service=>({...service,enabled:states.get(service.id)??false})));
+        setError(null);
+      })
+      .catch(nextError=>{
+        if(active)setError(nextError instanceof Error?nextError.message:'No pudimos cargar los servicios.');
+      })
+      .finally(()=>{if(active)setLoading(false);});
+    return ()=>{active=false;};
+  },[]);
+
+  const toggle=async(id:string)=>{
+    const service=items.find(item=>item.id===id);
+    if(!service||savingId)return;
+    setSavingId(id);
+    setError(null);
+    try{
+      const enabled=await subscriptionService.set(id,!service.enabled);
+      setItems(current=>current.map(item=>item.id===id?{...item,enabled}:item));
+    }catch(nextError){
+      setError(nextError instanceof Error?nextError.message:'No pudimos guardar el servicio.');
+    }finally{
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <Screen>
+      <AppHeader title="Servicios automáticos"/>
+      <Animated.View entering={FadeInDown.duration(340)} style={styles.hero}>
+        <View style={styles.heroCopy}>
+          <Text style={styles.title}>Automatizá tus pagos</Text>
+          <Text style={styles.sub}>Conectá tus servicios y Pato los paga automáticamente por vos.</Text>
+        </View>
+        <PatoAgent size={124}/>
+      </Animated.View>
+
+      {loading&&<View style={styles.status}><ActivityIndicator color={colors.yellow}/><Text style={styles.statusText}>Sincronizando con Supabase…</Text></View>}
+      {!loading&&error&&<Animated.Text entering={FadeInDown.duration(220)} style={styles.error}>{error}</Animated.Text>}
+
+      <View style={styles.list}>
+        {items.map((service,index)=>(
+          <Animated.View key={service.id} entering={FadeInDown.delay(index*55).duration(280)}>
+            <ServiceRow
+              service={service}
+              last={index===items.length-1}
+              disabled={loading||savingId!==null}
+              onToggle={()=>void toggle(service.id)}
+            />
+          </Animated.View>
+        ))}
+      </View>
+    </Screen>
+  );
+}
+
+const styles=StyleSheet.create({
+  hero:{
+    minHeight:150,
+    flexDirection:'row',
+    alignItems:'center',
+    paddingLeft:spacing.lg,
+    borderRadius:radius.lg,
+    overflow:'hidden',
+    backgroundColor:colors.surface,
+    borderWidth:1,
+    borderColor:colors.border,
+  },
+  heroCopy:{flex:1,zIndex:1},
+  title:{...typography.h2,color:colors.text},
+  sub:{...typography.small,color:colors.muted,marginTop:spacing.xs},
+  status:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:spacing.xs,marginTop:spacing.md},
+  statusText:{...typography.caption,color:colors.muted,fontWeight:'400'},
+  error:{...typography.caption,color:colors.danger,textAlign:'center',marginTop:spacing.md,fontWeight:'400'},
+  list:{marginTop:spacing.lg,backgroundColor:colors.surface,borderRadius:radius.lg,overflow:'hidden',borderWidth:1,borderColor:colors.border},
+});
