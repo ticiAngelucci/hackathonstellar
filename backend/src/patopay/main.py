@@ -30,8 +30,13 @@ def create_app(
     settings: Settings | None = None,
     event_service: EventService | None = None,
     database: DatabaseHealth | None = None,
+    auth_verifier: object | None = None,
+    unit_of_work_factory: object | None = None,
+    payment_executor: object | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
+    if resolved_settings.payment_executor == "stellar" and payment_executor is None:
+        raise RuntimeError("Stellar payment executor is not configured")
     resolved_database = (
         database
         if database is not None
@@ -45,6 +50,9 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.database = resolved_database
+    application.state.auth_verifier = auth_verifier
+    application.state.unit_of_work_factory = unit_of_work_factory
+    application.state.payment_executor = payment_executor
     application.state.event_service = (
         event_service if event_service is not None else InMemoryEventService()
     )

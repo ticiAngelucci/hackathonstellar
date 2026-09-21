@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,9 +31,32 @@ class Settings(BaseSettings):
         pattern=r"^[a-z0-9]{20}$",
     )
     supabase_publishable_key: str | None = None
-    database_url: str | None = None
+    database_url: SecretStr | None = None
     db_pool_size: int = Field(default=5, ge=1, le=20)
     db_max_overflow: int = Field(default=5, ge=0, le=20)
+    database_sslmode: Literal["require", "disable"] = "require"
+    payment_executor: Literal["mock", "stellar"] = "mock"
+    stellar_network: Literal["testnet"] = "testnet"
+    stellar_rpc_url: HttpUrl | None = None
+    stellar_relayer_url: HttpUrl | None = None
+    stellar_asset_contract_id: str | None = Field(
+        default=None,
+        pattern=r"^C[A-Z2-7]{55}$",
+    )
+    stellar_asset_code: str = "USDC"
+    stellar_asset_scale: int = Field(default=7, ge=0, le=18)
+
+    @model_validator(mode="after")
+    def validate_payment_configuration(self) -> "Settings":
+        if self.payment_executor == "stellar" and not all(
+            (
+                self.stellar_rpc_url,
+                self.stellar_relayer_url,
+                self.stellar_asset_contract_id,
+            )
+        ):
+            raise ValueError("Stellar payment configuration is incomplete")
+        return self
 
     @cached_property
     def supabase_issuer(self) -> str:
