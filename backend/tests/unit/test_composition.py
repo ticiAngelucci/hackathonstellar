@@ -1,6 +1,7 @@
 import pytest
 
 from patopay.config import Settings
+from patopay.infrastructure.postgres.database import Database
 from patopay.main import create_app
 
 CONTRACT_ID = "C" + ("A" * 55)
@@ -33,3 +34,22 @@ def test_create_app_does_not_fallback_when_stellar_executor_is_missing() -> None
 
     with pytest.raises(RuntimeError, match="Stellar payment executor is not configured"):
         create_app(settings=settings)
+
+
+def test_create_app_selects_offline_mock_executor_by_default() -> None:
+    app = create_app(settings=Settings(env="test"))
+
+    assert app.state.payment_executor.mode == "mock"
+
+
+def test_create_app_builds_uow_factory_from_database() -> None:
+    database = Database(
+        Settings(
+            env="test",
+            database_url="postgresql://runtime:password@example.com:5432/postgres",
+        )
+    )
+
+    app = create_app(database=database)
+
+    assert callable(app.state.unit_of_work_factory)

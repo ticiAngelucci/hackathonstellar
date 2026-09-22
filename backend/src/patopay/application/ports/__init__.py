@@ -7,3 +7,6 @@ class EventService(Protocol):
     async def list_events(self) -> list[Event]: ...
 
     async def create_event(self, name: str, creator: Participant) -> Event: ...
+
+
+__all__ = ["EventService"]

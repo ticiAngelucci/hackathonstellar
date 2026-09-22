@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from patopay.config import Settings
 
@@ -21,6 +21,7 @@ class Database:
             pool_size=settings.db_pool_size,
             max_overflow=settings.db_max_overflow,
         )
+        self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def check_connection(self) -> None:
         async with self.engine.connect() as connection:

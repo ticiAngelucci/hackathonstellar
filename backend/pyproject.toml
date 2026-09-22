@@ -36,6 +36,9 @@ packages = ["src/patopay"]
 addopts = "-q"
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "integration: requires a real PostgreSQL database configured by environment",
+]
 
 [tool.ruff]
 line-length = 100
