@@ -10,11 +10,12 @@ from patopay.api.routes.profiles import router as profiles_router
 from patopay.application.ports import EventService
 from patopay.application.ports.auth import AuthVerifier
 from patopay.application.ports.supabase import SupabaseGateway
+from patopay.application.use_cases.events import SupabaseEventService
 from patopay.config import Settings
 from patopay.infrastructure.auth.supabase_jwt import SupabaseJwtVerifier
-from patopay.infrastructure.memory_event_service import InMemoryEventService
 from patopay.infrastructure.payments.mock import MockPaymentExecutor
 from patopay.infrastructure.supabase.client import SupabaseClient
+from patopay.infrastructure.supabase.gateway import SupabaseTableGateway
 
 
 class DisposableSupabase(SupabaseGateway, Protocol):
@@ -70,9 +71,10 @@ def create_app(
     application.state.supabase_gateway = resolved_supabase
     application.state.auth_verifier = resolved_auth_verifier
     application.state.payment_executor = resolved_payment_executor
-    application.state.event_service = (
-        event_service if event_service is not None else InMemoryEventService()
-    )
+    resolved_event_service = event_service
+    if resolved_event_service is None and isinstance(resolved_supabase, SupabaseClient):
+        resolved_event_service = SupabaseEventService(SupabaseTableGateway(resolved_supabase))
+    application.state.event_service = resolved_event_service
     application.add_middleware(
         CORSMiddleware,
         allow_origins=resolved_settings.cors_origins,

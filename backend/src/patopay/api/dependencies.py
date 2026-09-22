@@ -56,4 +56,10 @@ def get_access_token(authorization: Annotated[str | None, Header()] = None) -> s
 
 
 def get_event_service(request: Request) -> EventService:
-    return cast(EventService, request.app.state.event_service)
+    service = getattr(request.app.state, "event_service", None)
+    if service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Events service is not configured",
+        )
+    return cast(EventService, service)
