@@ -1,7 +1,7 @@
 import pytest
 
 from patopay.config import Settings
-from patopay.infrastructure.postgres.database import Database
+from patopay.infrastructure.supabase.client import SupabaseClient
 from patopay.main import create_app
 
 CONTRACT_ID = "C" + ("A" * 55)
@@ -9,17 +9,17 @@ CONTRACT_ID = "C" + ("A" * 55)
 
 def test_create_app_keeps_explicit_application_dependencies() -> None:
     auth_verifier = object()
-    unit_of_work_factory = object()
+    supabase_gateway = object()
     payment_executor = object()
 
     app = create_app(
         auth_verifier=auth_verifier,
-        unit_of_work_factory=unit_of_work_factory,
+        supabase_gateway=supabase_gateway,
         payment_executor=payment_executor,
     )
 
     assert app.state.auth_verifier is auth_verifier
-    assert app.state.unit_of_work_factory is unit_of_work_factory
+    assert app.state.supabase_gateway is supabase_gateway
     assert app.state.payment_executor is payment_executor
 
 
@@ -42,14 +42,12 @@ def test_create_app_selects_offline_mock_executor_by_default() -> None:
     assert app.state.payment_executor.mode == "mock"
 
 
-def test_create_app_builds_uow_factory_from_database() -> None:
-    database = Database(
-        Settings(
+def test_create_app_builds_supabase_client_from_cloud_settings() -> None:
+    app = create_app(
+        settings=Settings(
             env="test",
-            database_url="postgresql://runtime:password@example.com:5432/postgres",
+            supabase_publishable_key="publishable-test-key",
         )
     )
 
-    app = create_app(database=database)
-
-    assert callable(app.state.unit_of_work_factory)
+    assert isinstance(app.state.supabase, SupabaseClient)

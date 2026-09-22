@@ -3,18 +3,18 @@ from httpx import ASGITransport, AsyncClient
 from patopay.main import create_app
 
 
-class HealthyDatabase:
+class HealthySupabase:
     async def check_connection(self) -> None:
         return None
 
 
-class UnavailableDatabase:
+class UnavailableSupabase:
     async def check_connection(self) -> None:
-        raise ConnectionError("database unavailable")
+        raise ConnectionError("Supabase unavailable")
 
 
-async def test_ready_reports_database_ready() -> None:
-    app = create_app(database=HealthyDatabase())
+async def test_ready_reports_supabase_ready() -> None:
+    app = create_app(supabase_gateway=HealthySupabase())
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -26,8 +26,8 @@ async def test_ready_reports_database_ready() -> None:
     assert response.json() == {"status": "ready"}
 
 
-async def test_ready_reports_not_ready_when_database_is_unavailable() -> None:
-    app = create_app(database=UnavailableDatabase())
+async def test_ready_reports_not_ready_when_supabase_is_unavailable() -> None:
+    app = create_app(supabase_gateway=UnavailableSupabase())
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -36,4 +36,4 @@ async def test_ready_reports_not_ready_when_database_is_unavailable() -> None:
         response = await client.get("/ready")
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Database is not ready"}
+    assert response.json() == {"detail": "Supabase is not ready"}

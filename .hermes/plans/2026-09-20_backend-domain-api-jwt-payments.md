@@ -134,7 +134,7 @@ Estado relevante:
 
 - `API -> Application -> Domain -> Infrastructure` ya está esbozada.
 - `POST/GET /api/v1/events` usan `InMemoryEventService`; el creador todavía llega en el body.
-- SQLAlchemy async + psycopg y `/ready` existen, pero no hay mappings, UoW ni repositorios.
+- Supabase Cloud/PostgREST y `/ready` existen, pero no hay gateway de persistencia de dominio.
 - Supabase tiene migrations para `public.events`, `public.wallets`, `public.transactions`, `public.service_subscriptions` y `public.payment_policies`.
 - Esas tablas permiten lectura/escritura amplia a `anon`/`authenticated`; son demo, no una frontera aceptable para datos financieros.
 - Expo usa PostgREST directamente en `frontend/src/services/eventService.ts` y `frontend/src/services/appDataService.ts`.
@@ -407,7 +407,7 @@ Constraints mínimas:
 - no cascade desde `auth.users` a historia de pagos;
 - índices por participant, payer, requester, status, created_at y request.
 
-No usar `Base.metadata.create_all()` en runtime. SQL migrations son la fuente de verdad; mappings SQLAlchemy deben reflejarlas exactamente.
+No usar `Base.metadata.create_all()` en runtime. Las SQL migrations de Supabase son la fuente de verdad; el gateway PostgREST debe respetar sus tablas, grants y RLS.
 
 ---
 
@@ -526,10 +526,10 @@ PATOPAY_STELLAR_RELAYER_URL=
 PATOPAY_STELLAR_ASSET_CONTRACT_ID=
 PATOPAY_STELLAR_ASSET_CODE=USDC
 PATOPAY_STELLAR_ASSET_SCALE=7
-PATOPAY_DATABASE_SSLMODE=require|disable
+PATOPAY_SUPABASE_TIMEOUT_SECONDS=10
 ```
 
-Mover `httpx` de dev a runtime si `uv add` lo duplica. No agregar Supabase SDK Python: Auth se valida por JWT/JWKS y DB se usa por SQLAlchemy.
+Mover `httpx` a runtime para el adapter Supabase/PostgREST. No usar un driver PostgreSQL ni abrir conexiones SQL desde FastAPI: Auth se valida por JWT/JWKS y las operaciones de dominio pasan por la API Supabase.
 
 ### Gate
 
@@ -692,10 +692,9 @@ Crear:
 
 - `supabase/migrations/20260920000300_create_backend_core.sql`
 - `supabase/migrations/20260920000400_lock_down_legacy_app_state.sql`
-- `supabase/scripts/provision_patopay_runtime.sql`
 - `supabase/seed.sql` con UUIDs/montos ficticios o deshabilitar seed hasta crearlo.
 
-La migration `00300` crea `patopay`, roles sin password, tablas, trigger y policies. La `00400` debe:
+La migration `00300` crea `patopay`, tablas, trigger y policies para `authenticated`. La `00400` debe:
 
 1. revocar INSERT/UPDATE/DELETE públicos de las tablas demo;
 2. no dropear tablas todavía;
@@ -725,75 +724,75 @@ Además, conectado como runtime:
 ```bash
 git add supabase/migrations/20260920000300_create_backend_core.sql \
   supabase/migrations/20260920000400_lock_down_legacy_app_state.sql \
-  supabase/tests/database supabase/scripts/provision_patopay_runtime.sql \
-  supabase/seed.sql
+  supabase/tests/database supabase/seed.sql
 git commit -m "feat: define private authenticated payment schema"
 ```
 
-## Fase 4 — SQLAlchemy mappings, repositorios y Unit of Work
+## Fase 4 — Adapter Supabase/PostgREST, repositorios HTTP y contexto autenticado
 
 ### Dependencias
 
-Fase 3 y Postgres local levantado.
+Fase 3 y acceso HTTP a Supabase Cloud. No requiere PostgreSQL local ni `supabase start`.
 
 ### RED
 
 Crear:
 
-- `backend/tests/integration/conftest.py`
-- `backend/tests/integration/postgres/test_unit_of_work.py`
-- `backend/tests/integration/postgres/test_repositories.py`
-- `backend/tests/integration/postgres/test_rls.py`
-
-Marcar `integration`; requerir `PATOPAY_TEST_DATABASE_URL`, sin usar DB Cloud por default.
+- `backend/tests/test_supabase_client.py`
+- `backend/tests/unit/test_composition.py`
+- `backend/tests/test_supabase_lifecycle.py`
 
 Slices:
 
-1. UoW propaga `sub` y rollback funciona;
-2. identidad no se filtra entre sesiones del pool;
-3. profile/asset/wallet/policy-version/request/decision/payment-attempt round-trip;
-4. constraints devuelven error tipado;
-5. user B no lee filas de A;
-6. optimistic update afecta exactamente una fila.
+1. el cliente usa el publishable key en `apikey`;
+2. las operaciones de dominio propagan el JWT real como `Authorization: Bearer`;
+3. readiness consulta `/rest/v1/` y mapea errores a `503`;
+4. table gateway valida nombres de tabla y construye filtros PostgREST;
+5. insert/update usan `Prefer: return=representation`;
+6. RPC permite encapsular operaciones multi-row atómicas en funciones SQL de Supabase;
+7. ningún request usa DSN, Psycopg, SQLAlchemy ni service role.
 
 ```bash
-PATOPAY_TEST_DATABASE_URL="$LOCAL_RUNTIME_DATABASE_URL" \
-  uv run pytest tests/integration/postgres/test_unit_of_work.py::test_subject_is_transaction_local -q
+uv run pytest tests/test_supabase_client.py::test_supabase_client_forwards_user_jwt_to_postgrest -q
 ```
 
 ### GREEN/REFACTOR
 
 Crear:
 
-- `backend/src/patopay/application/ports/auth.py`
-- `backend/src/patopay/application/ports/repositories.py`
-- `backend/src/patopay/application/ports/unit_of_work.py`
-- `backend/src/patopay/application/ports/payments.py`
-- `backend/src/patopay/infrastructure/postgres/models.py`
-- `backend/src/patopay/infrastructure/postgres/unit_of_work.py`
-- `backend/src/patopay/infrastructure/postgres/repositories/`
+- `backend/src/patopay/application/ports/supabase.py`
+- `backend/src/patopay/infrastructure/supabase/client.py`
+- `backend/src/patopay/infrastructure/supabase/gateway.py`
 
-Convertir el actual `application/ports.py` en package sólo cuando imports y tests estén verdes. Mantener `database.py` como factory/health, agregar `async_sessionmaker(expire_on_commit=False)`.
+El cliente debe usar `httpx.AsyncClient`, timeout configurable, `apikey`
+publishable y JWT por request. La persistencia multi-row que requiera atomicidad
+se implementará como RPC SQL en Supabase y se invocará por PostgREST; no se
+simula una Unit of Work Python que no pueda garantizar rollback remoto.
 
 ### Gate
 
 ```bash
-PATOPAY_TEST_DATABASE_URL="$LOCAL_RUNTIME_DATABASE_URL" uv run pytest -m integration -q
-uv run pytest -m 'not integration' -q
+uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
 ```
 
-Aceptación: ningún repository fake sustituye tests de RLS, locks, transaction rollback o constraints.
+Aceptación: FastAPI no importa `sqlalchemy`/`psycopg`, no recibe
+`PATOPAY_DATABASE_URL`, no usa `service_role` y todas las operaciones privadas
+requieren JWT de Supabase. Las migrations y pgTAP se validan con Supabase CLI
+contra el proyecto/local stack sólo cuando el entorno Docker/CLI está disponible.
 
 ### Commit
 
 ```bash
-git add backend/src/patopay/application/ports \
-  backend/src/patopay/infrastructure/postgres backend/tests/integration
-# agregar eliminación de application/ports.py sólo si la reemplaza el package
-git commit -m "feat: add transactional PostgreSQL persistence"
+git add backend/pyproject.toml backend/uv.lock \
+  backend/src/patopay/application/ports \
+  backend/src/patopay/infrastructure/supabase \
+  backend/src/patopay/main.py backend/src/patopay/api/routes/health.py \
+  backend/tests docs supabase/config.toml
+ git diff --cached --check
+git commit -m "refactor: use Supabase API instead of direct database access"
 ```
 
 ## Fase 5 — JWT Supabase y perfil actual
@@ -1469,7 +1468,7 @@ git status --short --branch
 git log --oneline --decorate -20
 ```
 
-El scan se revisa, no se “pasa” automáticamente: SQLAlchemy `DeclarativeBase` puede tener `pass`, pero no deben quedar placeholders, broad catches, debug output, paths locales ni secretos.
+El scan se revisa, no se “pasa” automáticamente: los adapters HTTP pueden tener clases pequeñas, pero no deben quedar placeholders, broad catches, debug output, paths locales ni secretos.
 
 ### Criterios de cierre
 

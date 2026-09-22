@@ -7,18 +7,6 @@ create extension if not exists pgcrypto;
 create schema if not exists patopay;
 revoke all on schema patopay from public, anon, authenticated;
 
--- The runtime role is intentionally non-login and must be provisioned with a
--- password outside migrations when a deployment needs it.
-do $$
-begin
-  if not exists (select 1 from pg_roles where rolname = 'patopay_runtime') then
-    create role patopay_runtime nologin nosuperuser nocreatedb nocreaterole noreplication;
-  end if;
-end
-$$;
-
-alter role patopay_runtime set search_path = patopay, public;
-
 create table if not exists patopay.profiles (
   id uuid primary key references auth.users(id),
   username citext unique,
@@ -244,19 +232,19 @@ begin
 end
 $$;
 
-create policy profiles_runtime_select on patopay.profiles
-  for select to patopay_runtime
+create policy profiles_authenticated_select on patopay.profiles
+  for select to authenticated
   using (id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy profiles_runtime_insert on patopay.profiles
-  for insert to patopay_runtime
+create policy profiles_authenticated_insert on patopay.profiles
+  for insert to authenticated
   with check (id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy profiles_runtime_update on patopay.profiles
-  for update to patopay_runtime
+create policy profiles_authenticated_update on patopay.profiles
+  for update to authenticated
   using (id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
 
-create policy events_runtime_access on patopay.events
-  for all to patopay_runtime
+create policy events_authenticated_access on patopay.events
+  for all to authenticated
   using (
     owner_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
     or exists (
@@ -266,64 +254,64 @@ create policy events_runtime_access on patopay.events
     )
   )
   with check (owner_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy participants_runtime_access on patopay.event_participants
-  for all to patopay_runtime
+create policy participants_authenticated_access on patopay.event_participants
+  for all to authenticated
   using (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
 
-create policy assets_runtime_select on patopay.assets
-  for select to patopay_runtime using (enabled);
-create policy wallets_runtime_access on patopay.wallets
-  for all to patopay_runtime
+create policy assets_authenticated_select on patopay.assets
+  for select to authenticated using (enabled);
+create policy wallets_authenticated_access on patopay.wallets
+  for all to authenticated
   using (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy mock_balances_runtime_access on patopay.mock_wallet_balances
-  for all to patopay_runtime
+create policy mock_balances_authenticated_access on patopay.mock_wallet_balances
+  for all to authenticated
   using (exists (select 1 from patopay.wallets w where w.id = wallet_id and w.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid))
   with check (exists (select 1 from patopay.wallets w where w.id = wallet_id and w.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid));
 
-create policy policies_runtime_access on patopay.payment_policy_versions
-  for all to patopay_runtime
+create policy policies_authenticated_access on patopay.payment_policy_versions
+  for all to authenticated
   using (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy policy_recipients_runtime_access on patopay.policy_allowed_recipients
-  for all to patopay_runtime
+create policy policy_recipients_authenticated_access on patopay.policy_allowed_recipients
+  for all to authenticated
   using (exists (select 1 from patopay.payment_policy_versions p where p.id = policy_version_id and p.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid))
   with check (exists (select 1 from patopay.payment_policy_versions p where p.id = policy_version_id and p.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid));
-create policy policy_assets_runtime_access on patopay.policy_allowed_assets
-  for all to patopay_runtime
+create policy policy_assets_authenticated_access on patopay.policy_allowed_assets
+  for all to authenticated
   using (exists (select 1 from patopay.payment_policy_versions p where p.id = policy_version_id and p.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid))
   with check (exists (select 1 from patopay.payment_policy_versions p where p.id = policy_version_id and p.user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid));
-create policy subscriptions_runtime_access on patopay.service_subscriptions
-  for all to patopay_runtime
+create policy subscriptions_authenticated_access on patopay.service_subscriptions
+  for all to authenticated
   using (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (user_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
 
-create policy requests_runtime_access on patopay.payment_requests
-  for all to patopay_runtime
+create policy requests_authenticated_access on patopay.payment_requests
+  for all to authenticated
   using (
     payer_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
     or requester_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   )
   with check (requester_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy decisions_runtime_select on patopay.policy_decisions
-  for select to patopay_runtime
+create policy decisions_authenticated_select on patopay.policy_decisions
+  for select to authenticated
   using (exists (select 1 from patopay.payment_requests r where r.id = payment_request_id and (r.payer_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid or r.requester_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)));
-create policy decisions_runtime_insert on patopay.policy_decisions
-  for insert to patopay_runtime
+create policy decisions_authenticated_insert on patopay.policy_decisions
+  for insert to authenticated
   with check (actor_id is null or actor_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
-create policy attempts_runtime_access on patopay.payment_attempts
-  for all to patopay_runtime
+create policy attempts_authenticated_access on patopay.payment_attempts
+  for all to authenticated
   using (exists (select 1 from patopay.payment_requests r where r.id = payment_request_id and (r.payer_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid or r.requester_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)))
   with check (exists (select 1 from patopay.payment_requests r where r.id = payment_request_id and r.payer_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid));
-create policy idempotency_runtime_access on patopay.idempotency_keys
-  for all to patopay_runtime
+create policy idempotency_authenticated_access on patopay.idempotency_keys
+  for all to authenticated
   using (actor_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid)
   with check (actor_id = nullif(current_setting('request.jwt.claim.sub', true), '')::uuid);
 
--- No Data API access to the private application schema.
+-- Only authenticated Supabase API requests may access the application schema.
 revoke all on all tables in schema patopay from public, anon, authenticated;
 revoke all on all sequences in schema patopay from public, anon, authenticated;
-grant usage on schema patopay to patopay_runtime;
-grant select, insert, update on all tables in schema patopay to patopay_runtime;
-grant usage, select on all sequences in schema patopay to patopay_runtime;
+grant usage on schema patopay to authenticated;
+grant select, insert, update on all tables in schema patopay to authenticated;
+grant usage, select on all sequences in schema patopay to authenticated;

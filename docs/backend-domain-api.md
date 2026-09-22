@@ -14,7 +14,7 @@ PATOPAY_STELLAR_RELAYER_URL=
 PATOPAY_STELLAR_ASSET_CONTRACT_ID=
 PATOPAY_STELLAR_ASSET_CODE=USDC
 PATOPAY_STELLAR_ASSET_SCALE=7
-PATOPAY_DATABASE_SSLMODE=require
+PATOPAY_SUPABASE_TIMEOUT_SECONDS=10
 ```
 
 `PATOPAY_PAYMENT_EXECUTOR=stellar` is opt-in and requires all of the following:
@@ -26,9 +26,16 @@ PATOPAY_DATABASE_SSLMODE=require
 
 Startup fails instead of falling back to mock when the Stellar configuration or adapter is missing. The contract ID is authoritative; `USDC` is display metadata only. Amounts use integer base units with scale 7 and never use floating point as the canonical value.
 
-## PostgreSQL
+## Supabase Cloud API
 
-`PATOPAY_DATABASE_URL` is server-only and is redacted by the settings representation. `PATOPAY_DATABASE_SSLMODE=require` is the remote default; disposable local PostgreSQL may explicitly use `disable`. Supabase Cloud remains hosted by Supabase; a future VPS runs only FastAPI.
+FastAPI no recibe un DSN PostgreSQL ni abre una conexión SQL directa. Usa el
+publishable key para llamar al API de Supabase/PostgREST y propaga el JWT del
+usuario en las operaciones de dominio. Supabase Cloud administra PostgreSQL,
+Auth y RLS; el VPS futuro ejecuta únicamente FastAPI.
+
+Las migrations SQL de `supabase/migrations/` siguen siendo la fuente de verdad
+del schema, pero se aplican mediante Supabase CLI al proyecto Cloud. No se debe
+ejecutar `supabase start` para conectar el backend al proyecto compartido.
 
 ## Self-custody boundary
 

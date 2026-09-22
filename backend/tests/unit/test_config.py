@@ -36,7 +36,7 @@ def test_mock_payment_settings_work_without_stellar_infrastructure() -> None:
     assert settings.stellar_asset_contract_id is None
     assert settings.stellar_asset_code == "USDC"
     assert settings.stellar_asset_scale == 7
-    assert settings.database_sslmode == "require"
+    assert settings.supabase_timeout_seconds == 10.0
 
 
 def test_payment_executor_rejects_unknown_provider() -> None:
@@ -78,3 +78,11 @@ def test_database_secret_does_not_appear_in_settings_repr() -> None:
     )
 
     assert "sensitive-password" not in repr(settings)
+
+
+def test_settings_do_not_define_a_direct_postgres_connection() -> None:
+    settings = Settings(env="test")
+
+    assert not hasattr(settings, "database_url")
+    assert not hasattr(settings, "db_pool_size")
+    assert not hasattr(settings, "database_sslmode")

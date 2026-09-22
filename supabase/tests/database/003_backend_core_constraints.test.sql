@@ -52,12 +52,12 @@ select ok(
 );
 select ok(
   (select count(*) = 0 from information_schema.role_table_grants
-   where table_schema = 'patopay' and grantee in ('anon', 'authenticated')),
-  'anonymous and authenticated roles have no direct table grants'
+   where table_schema = 'patopay' and grantee = 'anon'),
+  'anonymous role has no direct table grants'
 );
 select ok(
-  (select not rolbypassrls from pg_roles where rolname = 'patopay_runtime'),
-  'runtime role cannot bypass RLS'
+  (select not has_schema_privilege('authenticated', 'patopay', 'CREATE')),
+  'authenticated role cannot create schema objects'
 );
 
 select * from finish();

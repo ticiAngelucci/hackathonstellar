@@ -29,16 +29,17 @@ select ok(
 );
 select ok(
   (select count(*) = 0 from information_schema.role_table_grants
-   where table_schema = 'patopay' and grantee in ('anon', 'authenticated')),
-  'Data API roles have no direct grants on private schema'
+   where table_schema = 'patopay' and grantee = 'anon'),
+  'anonymous Data API role has no direct grants'
 );
 select ok(
-  (select count(*) = 0 from pg_roles where rolname = 'patopay_runtime' and (rolsuper or rolbypassrls)),
-  'runtime role is not superuser or BYPASSRLS'
+  (select count(*) > 0 from information_schema.role_table_grants
+   where table_schema = 'patopay' and grantee = 'authenticated'),
+  'authenticated Data API role has explicit grants'
 );
 select ok(
-  (select not has_schema_privilege('patopay_runtime', 'patopay', 'CREATE')),
-  'runtime role cannot create objects'
+  (select not has_schema_privilege('authenticated', 'patopay', 'CREATE')),
+  'authenticated Data API role cannot create objects'
 );
 
 select * from finish();

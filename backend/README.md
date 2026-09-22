@@ -31,9 +31,12 @@ PatoPay Core contiene la lógica principal del producto y funciona como la fuent
 
 El Settlement Engine calcula cuánto pagó cada persona, cuánto debería haber pagado y cuál es su balance final. También genera las transferencias necesarias y las optimiza para reducir la cantidad de pagos. Por ejemplo, en lugar de hacer varias transferencias cruzadas, puede determinar que dos personas paguen directamente a un tercero. Este componente debe trabajar con importes exactos, idealmente usando enteros o `Decimal`, y debe generar revisiones nuevas cuando se modifica una disputa o una participación.
 
-## PostgreSQL
+## Supabase Cloud / PostgreSQL administrado
 
-PostgreSQL almacena toda la información persistente de PatoPay: usuarios, eventos, gastos, participantes, balances, PaymentRequests, disputas, estados de settlement, hashes de pagos y receipts. También debe mantener un historial auditable de las revisiones. Si un usuario disputa un gasto, no conviene sobrescribir el settlement anterior; se debe crear una nueva revisión y marcar la anterior como obsoleta. La base de datos también será responsable de garantizar idempotencia para evitar que un mismo pago se procese dos veces.
+Supabase Cloud administra PostgreSQL, Auth, RLS y la API PostgREST de PatoPay.
+FastAPI no abre una conexión SQL directa: las operaciones de dominio pasan por
+la API de Supabase con el JWT del usuario. Las migrations SQL de `supabase/`
+definen el schema y se aplican al proyecto Cloud mediante Supabase CLI.
 
 ## Payment Rail: x402 Gateway
 
@@ -99,9 +102,9 @@ que responde:
 }
 ```
 
-La API también expone `GET /ready`, que verifica la conexión PostgreSQL
-configurada y devuelve `200` sólo cuando la base responde. Si todavía no existe
-`backend/.env` o falta `PATOPAY_DATABASE_URL`, devuelve `503`.
+La API también expone `GET /ready`, que verifica que Supabase Cloud responde
+mediante PostgREST y devuelve `200` sólo cuando el servicio está disponible. Si
+falta `PATOPAY_SUPABASE_PUBLISHABLE_KEY`, devuelve `503`.
 
 ### Segunda fase: eventos en memoria
 

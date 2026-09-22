@@ -18,7 +18,7 @@ select is(
   'auth user trigger creates profiles idempotently'
 );
 
-set role patopay_runtime;
+set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 select is((select count(*)::int from patopay.profiles), 1, 'subject A sees only own profile');
 select is((select count(*)::int from patopay.wallets), 1, 'subject A sees only own wallet');
@@ -36,7 +36,7 @@ select is(
   'cross-user update changes no row'
 );
 
-set role patopay_runtime;
+set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 update patopay.profiles set display_name = 'subject-a' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 reset role;

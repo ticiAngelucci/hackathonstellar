@@ -11,16 +11,17 @@ Expo / React Native
         ▼
 FastAPI local (:8000)
         │
-        │ PostgreSQL / readiness
+        │ Supabase Auth + PostgREST API
         ▼
 Supabase Cloud Free
 https://ekgfskibieqljhazchno.supabase.co
 ```
 
 Supabase no se levanta en el VPS ni con Docker para este flujo. El proyecto
-compartido está en Supabase Cloud Free. En esta fase el backend todavía guarda
-los eventos en memoria; la conexión PostgreSQL se verifica con `/ready`, pero
-los eventos aún no se persisten en Supabase.
+compartido está en Supabase Cloud Free. FastAPI usa el publishable key y el JWT
+del usuario contra las APIs de Supabase; no recibe un DSN PostgreSQL ni abre una
+conexión SQL directa. En esta fase el backend todavía guarda los eventos en
+memoria.
 
 ## Requisitos
 
@@ -40,47 +41,21 @@ uv sync --all-groups
 cp .env.example .env
 ```
 
-Editar `backend/.env` y completar los valores privados:
+Editar `backend/.env` y completar el publishable key de Supabase:
 
 ```dotenv
 PATOPAY_ENV=local
 PATOPAY_SUPABASE_URL=https://ekgfskibieqljhazchno.supabase.co
 PATOPAY_SUPABASE_PROJECT_REF=ekgfskibieqljhazchno
 PATOPAY_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
-PATOPAY_DATABASE_URL=postgresql+psycopg://<user>:<password>@<session-pooler-host>:5432/postgres
+PATOPAY_SUPABASE_TIMEOUT_SECONDS=10
 PATOPAY_CORS_ORIGINS=["http://localhost:8081","http://127.0.0.1:8081"]
 ```
 
-### De dónde sale `PATOPAY_DATABASE_URL`
-
-En Supabase:
-
-```text
-Connect
-→ Direct / Connection string
-→ Session pooler
-→ URI
-```
-
-Para este desarrollo local usamos **Session pooler** porque la conexión
-Direct depende de IPv6. Copiar la URI que muestra Supabase y cambiar solamente
-el esquema:
-
-```text
-postgresql://...
-```
-
-a:
-
-```text
-postgresql+psycopg://...
-```
-
-La contraseña es la **Database Password** del proyecto, no la publishable key
-ni el token de Supabase CLI. Si contiene caracteres especiales, debe estar
-URL-encoded.
-
-Nunca subir `backend/.env` a Git ni compartir su contenido por chat.
+El backend sólo usa el publishable key para consultar Supabase. Las operaciones
+privadas deben propagar el JWT real del usuario en el header `Authorization`.
+Nunca configurar una `service_role` key, una contraseña de base de datos ni una
+private key de wallet en FastAPI.
 
 ## 2. Verificar la conexión del backend
 
@@ -96,7 +71,6 @@ required = {
     'PATOPAY_SUPABASE_URL',
     'PATOPAY_SUPABASE_PROJECT_REF',
     'PATOPAY_SUPABASE_PUBLISHABLE_KEY',
-    'PATOPAY_DATABASE_URL',
 }
 keys = {
     line.split('=', 1)[0].strip()
@@ -164,13 +138,13 @@ Respuesta esperada:
 {"status":"ok","service":"patopay-api","version":"0.1.0"}
 ```
 
-### Readiness de PostgreSQL
+### Readiness de Supabase Cloud
 
 ```bash
 curl --fail --include http://API_HOST:8000/ready
 ```
 
-Respuesta esperada si la URI de Supabase funciona:
+Respuesta esperada cuando Supabase responde por PostgREST:
 
 ```http
 HTTP/1.1 200 OK
@@ -180,8 +154,8 @@ HTTP/1.1 200 OK
 {"status":"ready"}
 ```
 
-Un `503` significa que falta `PATOPAY_DATABASE_URL`, la URI es inválida o
-Supabase rechazó la conexión.
+Un `503` significa que falta `PATOPAY_SUPABASE_PUBLISHABLE_KEY` o Supabase no
+está disponible.
 
 ### Swagger
 
@@ -268,7 +242,7 @@ npx expo start
 Esta integración todavía no incluye:
 
 - Supabase Auth/JWT en FastAPI.
-- Persistencia de eventos en PostgreSQL.
+- Persistencia de eventos en las tablas privadas de Supabase.
 - Participantes persistentes.
 - Gastos y balances.
 - x402, Stellar o pagos reales.

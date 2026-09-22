@@ -1,6 +1,8 @@
+import httpx
 from fastapi import APIRouter, HTTPException, Request
-from sqlalchemy.exc import SQLAlchemyError
 from typing_extensions import TypedDict
+
+from patopay.infrastructure.supabase.client import SupabaseApiError
 
 router = APIRouter(tags=["health"])
 
@@ -22,13 +24,13 @@ async def health() -> HealthResponse:
 
 @router.get("/ready")
 async def ready(request: Request) -> dict[str, str]:
-    database = getattr(request.app.state, "database", None)
-    if database is None:
-        raise HTTPException(status_code=503, detail="Database is not ready")
+    supabase = getattr(request.app.state, "supabase", None)
+    if supabase is None:
+        raise HTTPException(status_code=503, detail="Supabase is not ready")
 
     try:
-        await database.check_connection()
-    except (ConnectionError, OSError, SQLAlchemyError) as error:
-        raise HTTPException(status_code=503, detail="Database is not ready") from error
+        await supabase.check_connection()
+    except (ConnectionError, OSError, ValueError, SupabaseApiError, httpx.HTTPError) as error:
+        raise HTTPException(status_code=503, detail="Supabase is not ready") from error
 
     return {"status": "ready"}

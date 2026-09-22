@@ -19,10 +19,8 @@ uv run uvicorn patopay.main:app --reload
 ```
 
 La API actual sigue usando memoria para los eventos: reiniciar Uvicorn borra los
-registros. La configuración y el pool SQLAlchemy para PostgreSQL ya están
-implementados, pero la persistencia de eventos y la autenticación JWT son las
-siguientes slices. Todavía no se debe enviar esta API sin autenticación a
-producción.
+registros. La readiness consulta Supabase Cloud mediante su API REST; no se
+configura un DSN PostgreSQL en FastAPI.
 
 ## Contrato actual
 
@@ -38,9 +36,9 @@ GET /health
 GET /ready
 ```
 
-Devuelve `200` con `{"status":"ready"}` únicamente cuando la conexión
-PostgreSQL configurada responde. Si falta `PATOPAY_DATABASE_URL` o la base no
-está disponible, devuelve `503`.
+Devuelve `200` con `{"status":"ready"}` únicamente cuando Supabase Cloud
+responde a través de PostgREST. Si falta `PATOPAY_SUPABASE_PUBLISHABLE_KEY` o
+Supabase no está disponible, devuelve `503`.
 
 ### Crear evento
 
@@ -158,8 +156,8 @@ Si usa Expo en un dispositivo físico, el teléfono y la computadora deben estar
 conectados a la misma red y el firewall debe permitir el puerto `8000`.
 
 > Esta fase todavía usa `InMemoryEventService`: los eventos no se guardan en
-> Supabase y se pierden al reiniciar Uvicorn. `/ready` sólo confirma que el
-> backend puede conectarse a PostgreSQL; la persistencia real de eventos viene
+> Supabase y se pierden al reiniciar Uvicorn. `/ready` sólo confirma que
+> Supabase Cloud responde por PostgREST; la persistencia real de eventos viene
 > en la siguiente slice.
 
 ## Frontend

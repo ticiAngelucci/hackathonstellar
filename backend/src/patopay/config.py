@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Literal
 
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import Field, HttpUrl, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,10 +31,7 @@ class Settings(BaseSettings):
         pattern=r"^[a-z0-9]{20}$",
     )
     supabase_publishable_key: str | None = None
-    database_url: SecretStr | None = None
-    db_pool_size: int = Field(default=5, ge=1, le=20)
-    db_max_overflow: int = Field(default=5, ge=0, le=20)
-    database_sslmode: Literal["require", "disable"] = "require"
+    supabase_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     payment_executor: Literal["mock", "stellar"] = "mock"
     stellar_network: Literal["testnet"] = "testnet"
     stellar_rpc_url: HttpUrl | None = None

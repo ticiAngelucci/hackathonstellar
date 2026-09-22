@@ -1,7 +1,5 @@
-from typing import Protocol
-
-from patopay.infrastructure.postgres.models import PaymentAttemptModel
+from typing import Any, Protocol
 
 
 class PaymentExecutor(Protocol):
-    async def execute(self, attempt: PaymentAttemptModel) -> object: ...
+    async def execute(self, attempt: Any) -> object: ...

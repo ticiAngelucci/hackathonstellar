@@ -3,7 +3,7 @@ from httpx import ASGITransport, AsyncClient
 from patopay.main import create_app
 
 
-class ManagedDatabase:
+class ManagedSupabase:
     disposed = False
 
     async def check_connection(self) -> None:
@@ -13,9 +13,9 @@ class ManagedDatabase:
         self.disposed = True
 
 
-async def test_app_disposes_database_on_shutdown() -> None:
-    database = ManagedDatabase()
-    app = create_app(database=database)
+async def test_app_disposes_supabase_on_shutdown() -> None:
+    supabase = ManagedSupabase()
+    app = create_app(supabase_gateway=supabase)
 
     async with app.router.lifespan_context(app):
         async with AsyncClient(
@@ -26,4 +26,4 @@ async def test_app_disposes_database_on_shutdown() -> None:
 
         assert response.status_code == 200
 
-    assert database.disposed is True
+    assert supabase.disposed is True
