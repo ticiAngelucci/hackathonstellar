@@ -93,7 +93,7 @@ begin
     v_outcome := 'blocked';
     v_reason := 'recipient_not_allowed';
   else
-    select coalesce(sum(pa.amount_minor), 0) into v_daily_minor
+    select coalesce(sum(pr.amount_minor), 0) into v_daily_minor
       from patopay.payment_attempts pa
       join patopay.payment_requests pr on pr.id = pa.payment_request_id
      where pr.payer_id = p_payer_profile_id
