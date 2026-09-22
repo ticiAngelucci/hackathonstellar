@@ -6,15 +6,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from patopay.api.router import events_router, router
+from patopay.api.routes.profiles import router as profiles_router
 from patopay.application.ports import EventService
+from patopay.application.ports.auth import AuthVerifier
 from patopay.application.ports.supabase import SupabaseGateway
 from patopay.config import Settings
+from patopay.infrastructure.auth.supabase_jwt import SupabaseJwtVerifier
 from patopay.infrastructure.memory_event_service import InMemoryEventService
 from patopay.infrastructure.payments.mock import MockPaymentExecutor
 from patopay.infrastructure.supabase.client import SupabaseClient
 
 
 class DisposableSupabase(SupabaseGateway, Protocol):
+    async def dispose(self) -> None: ...
+
+
+class DisposableAuthVerifier(AuthVerifier, Protocol):
     async def dispose(self) -> None: ...
 
 
@@ -26,6 +33,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         supabase = getattr(application.state, "supabase", None)
         if supabase is not None and hasattr(supabase, "dispose"):
             await cast(DisposableSupabase, supabase).dispose()
+        verifier = getattr(application.state, "auth_verifier", None)
+        if verifier is not None and hasattr(verifier, "dispose"):
+            await cast(DisposableAuthVerifier, verifier).dispose()
 
 
 def create_app(
@@ -53,9 +63,12 @@ def create_app(
     resolved_payment_executor = payment_executor
     if resolved_payment_executor is None and resolved_settings.payment_executor == "mock":
         resolved_payment_executor = MockPaymentExecutor()
+    resolved_auth_verifier = auth_verifier
+    if resolved_auth_verifier is None and resolved_settings.supabase_publishable_key:
+        resolved_auth_verifier = SupabaseJwtVerifier(resolved_settings)
     application.state.supabase = resolved_supabase
     application.state.supabase_gateway = resolved_supabase
-    application.state.auth_verifier = auth_verifier
+    application.state.auth_verifier = resolved_auth_verifier
     application.state.payment_executor = resolved_payment_executor
     application.state.event_service = (
         event_service if event_service is not None else InMemoryEventService()
@@ -69,6 +82,7 @@ def create_app(
     )
     application.include_router(router)
     application.include_router(events_router, prefix=resolved_settings.api_prefix)
+    application.include_router(profiles_router, prefix=resolved_settings.api_prefix)
     return application
 
 

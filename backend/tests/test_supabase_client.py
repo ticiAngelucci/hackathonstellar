@@ -81,4 +81,24 @@ async def test_supabase_table_gateway_reads_through_postgrest_with_user_jwt() ->
     assert requests[0].url.path == "/rest/v1/profiles"
     assert requests[0].url.params["id"] == "eq.profile-1"
     assert requests[0].headers["authorization"] == "Bearer user-jwt"
+    assert requests[0].headers["accept-profile"] == "patopay"
+    await client.dispose()
+
+
+async def test_supabase_table_gateway_sends_content_profile_for_mutations() -> None:
+    requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(201, json=[{"id": "profile-1"}])
+
+    client = SupabaseClient(
+        Settings(env="test", supabase_publishable_key="publishable-test-key"),
+        transport=httpx.MockTransport(handler),
+    )
+    gateway = SupabaseTableGateway(client)
+
+    await gateway.insert("profiles", {"id": "profile-1"}, access_token="user-jwt")
+
+    assert requests[0].headers["content-profile"] == "patopay"
     await client.dispose()

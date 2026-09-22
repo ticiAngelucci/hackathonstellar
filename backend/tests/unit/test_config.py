@@ -71,15 +71,6 @@ def test_stellar_executor_rejects_invalid_asset_contract_id() -> None:
         )
 
 
-def test_database_secret_does_not_appear_in_settings_repr() -> None:
-    settings = Settings(
-        env="test",
-        database_url="postgresql://runtime:sensitive-password@db.test/patopay",
-    )
-
-    assert "sensitive-password" not in repr(settings)
-
-
 def test_settings_do_not_define_a_direct_postgres_connection() -> None:
     settings = Settings(env="test")
 

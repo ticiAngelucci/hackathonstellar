@@ -1,6 +1,7 @@
 import pytest
 
 from patopay.config import Settings
+from patopay.infrastructure.auth.supabase_jwt import SupabaseJwtVerifier
 from patopay.infrastructure.supabase.client import SupabaseClient
 from patopay.main import create_app
 
@@ -51,3 +52,14 @@ def test_create_app_builds_supabase_client_from_cloud_settings() -> None:
     )
 
     assert isinstance(app.state.supabase, SupabaseClient)
+
+
+def test_create_app_builds_supabase_jwt_verifier_from_cloud_settings() -> None:
+    app = create_app(
+        settings=Settings(
+            env="test",
+            supabase_publishable_key="publishable-test-key",
+        )
+    )
+
+    assert isinstance(app.state.auth_verifier, SupabaseJwtVerifier)

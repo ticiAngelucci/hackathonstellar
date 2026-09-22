@@ -10,8 +10,11 @@ _IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 
 class SupabaseTableGateway:
-    def __init__(self, client: SupabaseClient) -> None:
+    def __init__(self, client: SupabaseClient, *, schema: str = "patopay") -> None:
         self._client = client
+        if not _IDENTIFIER.fullmatch(schema):
+            raise ValueError("Supabase schema name is invalid")
+        self._schema = schema
 
     async def select(
         self,
@@ -24,6 +27,7 @@ class SupabaseTableGateway:
             self._table_path(table),
             access_token=access_token,
             params=filters,
+            extra_headers={"Accept-Profile": self._schema},
         )
         if not isinstance(result, list):
             raise ValueError("Supabase table response must be a list")
@@ -35,13 +39,18 @@ class SupabaseTableGateway:
         record: Mapping[str, Any],
         *,
         access_token: str,
+        params: Mapping[str, str] | None = None,
     ) -> Any:
         return await self._client.request(
             self._table_path(table),
             method="POST",
             access_token=access_token,
+            params=params,
             json=dict(record),
-            extra_headers={"Prefer": "return=representation"},
+            extra_headers={
+                "Content-Profile": self._schema,
+                "Prefer": "resolution=merge-duplicates,return=representation",
+            },
         )
 
     async def update(
@@ -58,7 +67,10 @@ class SupabaseTableGateway:
             access_token=access_token,
             params=filters,
             json=dict(record),
-            extra_headers={"Prefer": "return=representation"},
+            extra_headers={
+                "Content-Profile": self._schema,
+                "Prefer": "return=representation",
+            },
         )
 
     async def rpc(
@@ -75,6 +87,7 @@ class SupabaseTableGateway:
             method="POST",
             access_token=access_token,
             json=dict(args),
+            extra_headers={"Content-Profile": self._schema},
         )
 
     @staticmethod

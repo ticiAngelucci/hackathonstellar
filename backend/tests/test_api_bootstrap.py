@@ -23,6 +23,8 @@ async def test_api_exposes_event_contract_and_frontend_cors() -> None:
     assert preflight.headers["access-control-allow-origin"] == "http://localhost:8081"
     assert sorted(openapi.json()["paths"]) == [
         "/api/v1/events",
+        "/api/v1/me",
+        "/api/v1/profiles",
         "/health",
         "/ready",
     ]
