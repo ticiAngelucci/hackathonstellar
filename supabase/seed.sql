@@ -1,0 +1,3 @@
+-- Intentionally empty seed.
+-- Do not seed auth users, wallets, balances, payment requests, or credentials.
+-- Test fixtures are created by database tests inside their own transaction.
