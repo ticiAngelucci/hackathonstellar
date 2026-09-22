@@ -6,7 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from patopay.api.router import events_router, router
+from patopay.api.routes.policies import router as policies_router
 from patopay.api.routes.profiles import router as profiles_router
+from patopay.api.routes.service_subscriptions import router as subscriptions_router
 from patopay.api.routes.wallets import router as wallets_router
 from patopay.application.ports import EventService
 from patopay.application.ports.auth import AuthVerifier
@@ -87,6 +89,8 @@ def create_app(
     application.include_router(events_router, prefix=resolved_settings.api_prefix)
     application.include_router(profiles_router, prefix=resolved_settings.api_prefix)
     application.include_router(wallets_router, prefix=resolved_settings.api_prefix)
+    application.include_router(policies_router, prefix=resolved_settings.api_prefix)
+    application.include_router(subscriptions_router, prefix=resolved_settings.api_prefix)
     return application
 
 
