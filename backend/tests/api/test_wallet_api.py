@@ -19,7 +19,7 @@ class FakeVerifier:
         return AuthenticatedActor(UUID(ACTOR_ID), "authenticated")
 
 
-def make_app() -> tuple[FastAPI, list[httpx.Request]]:
+def make_app(provider: str = "stellar") -> tuple[FastAPI, list[httpx.Request]]:
     requests: list[httpx.Request] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -30,7 +30,7 @@ def make_app() -> tuple[FastAPI, list[httpx.Request]]:
                 json=[
                     {
                         "id": WALLET_ID,
-                        "provider": "stellar",
+                        "provider": provider,
                         "network": "testnet",
                         "contract_address": CONTRACT_ID,
                         "wallet_wasm_hash": None,
@@ -57,7 +57,7 @@ def make_app() -> tuple[FastAPI, list[httpx.Request]]:
             json=[
                 {
                     "id": WALLET_ID,
-                    "provider": "stellar",
+                    "provider": provider,
                     "network": "testnet",
                     "contract_address": CONTRACT_ID,
                     "wallet_wasm_hash": None,
@@ -112,7 +112,7 @@ async def test_wallet_registration_rejects_private_material() -> None:
 
 
 async def test_mock_balance_returns_minor_units_and_observation() -> None:
-    app, _ = make_app()
+    app, _ = make_app(provider="mock")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get(
@@ -123,3 +123,15 @@ async def test_mock_balance_returns_minor_units_and_observation() -> None:
     assert response.status_code == 200
     assert response.json()["amount_minor"] == "100000000"
     assert response.json()["mode"] == "mock"
+
+
+async def test_stellar_balance_is_not_faked_as_mock() -> None:
+    app, _ = make_app(provider="stellar")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            f"/api/v1/me/wallets/{WALLET_ID}/balance",
+            headers={"Authorization": "Bearer valid-token"},
+        )
+
+    assert response.status_code == 503

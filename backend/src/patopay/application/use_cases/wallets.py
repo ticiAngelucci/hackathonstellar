@@ -108,7 +108,13 @@ class WalletService:
         wallet_id: UUID,
         access_token: str,
     ) -> dict[str, Any]:
-        await self.get(actor_id=actor_id, wallet_id=wallet_id, access_token=access_token)
+        wallet = await self.get(
+            actor_id=actor_id,
+            wallet_id=wallet_id,
+            access_token=access_token,
+        )
+        if wallet["provider"] != "mock":
+            raise RuntimeError("Stellar balance adapter is not configured")
         rows = await self._gateway.select(
             "mock_wallet_balances",
             access_token=access_token,

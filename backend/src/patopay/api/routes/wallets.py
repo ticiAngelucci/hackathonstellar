@@ -109,3 +109,5 @@ async def get_wallet_balance(
         )
     except LookupError as error:
         raise _map_error(error) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
