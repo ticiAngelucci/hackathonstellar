@@ -6,6 +6,12 @@ La guía canónica para implementar el frontend está en:
 frontend/BACKEND_INTEGRATION.md
 ```
 
+La referencia visual de endpoints, al estilo Swagger, está en:
+
+```text
+docs/patopay-api-reference.html
+```
+
 Incluye:
 
 - configuración local para Expo, emuladores y teléfono físico;
