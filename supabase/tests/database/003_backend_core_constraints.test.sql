@@ -1,4 +1,6 @@
 begin;
+set local role postgres;
+set local search_path = public, extensions, patopay;
 select plan(12);
 
 select ok(
@@ -44,8 +46,18 @@ select ok(
           where n.nspname = 'patopay' and r.relname = 'assets' and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%contract_address%'),
   'asset contract address is constrained'
 );
-select has_index('patopay', 'payment_attempts_one_active', 'only one active attempt is allowed');
-select has_index('patopay', 'wallets_one_default_per_user_network', 'only one default wallet exists per network');
+select has_index(
+  'patopay',
+  'payment_attempts',
+  'payment_attempts_one_active',
+  'only one active attempt is allowed'
+);
+select has_index(
+  'patopay',
+  'wallets',
+  'wallets_one_default_per_user_network',
+  'only one default wallet exists per network'
+);
 select ok(
   (select count(*) = 0 from pg_policies where schemaname = 'patopay' and tablename = 'policy_decisions' and cmd in ('UPDATE', 'DELETE')),
   'policy decisions have no update or delete policy'

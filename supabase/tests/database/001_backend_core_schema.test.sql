@@ -1,4 +1,6 @@
 begin;
+set local role postgres;
+set local search_path = public, extensions, patopay;
 select plan(18);
 
 select has_schema('patopay', 'private PatoPay schema exists');
@@ -9,8 +11,18 @@ select has_table('patopay', 'payment_requests', 'payment_requests table exists')
 select has_table('patopay', 'policy_decisions', 'policy_decisions table exists');
 select has_table('patopay', 'payment_attempts', 'payment_attempts table exists');
 select has_view('patopay', 'profile_directory', 'public profile directory exists');
-select has_index('patopay', 'wallets_one_default_per_user_network', 'wallet default uniqueness exists');
-select has_index('patopay', 'payment_attempts_one_active', 'active attempt uniqueness exists');
+select has_index(
+  'patopay',
+  'wallets',
+  'wallets_one_default_per_user_network',
+  'wallet default uniqueness exists'
+);
+select has_index(
+  'patopay',
+  'payment_attempts',
+  'payment_attempts_one_active',
+  'active attempt uniqueness exists'
+);
 select has_column('patopay', 'payment_requests', 'amount_minor', 'money is stored as amount_minor');
 select has_column('patopay', 'assets', 'contract_address', 'asset identity stores contract address');
 select has_trigger('auth', 'users', 'on_auth_user_created_patopay', 'auth trigger exists');

@@ -1,4 +1,6 @@
 begin;
+set local role postgres;
+set local search_path = public, extensions, patopay;
 select plan(7);
 
 select ok(
@@ -68,11 +70,13 @@ select ok(
   'anonymous users have no participant policy'
 );
 select ok(
-  position('auth.uid()' in pg_get_functiondef(p.oid)) > 0
-  from pg_proc p
-  join pg_namespace n on n.oid = p.pronamespace
-  where n.nspname = 'patopay' and p.proname = 'create_event_with_owner'
-  limit 1,
+  (
+    select position('auth.uid()' in pg_get_functiondef(p.oid)) > 0
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'patopay' and p.proname = 'create_event_with_owner'
+    limit 1
+  ),
   'event RPC derives owner from auth.uid'
 );
 

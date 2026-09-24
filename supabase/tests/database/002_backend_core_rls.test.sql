@@ -1,5 +1,7 @@
 begin;
-select plan(10);
+set local role postgres;
+set local search_path = public, extensions, patopay;
+select plan(8);
 
 insert into auth.users (id, aud, role, email)
 values
@@ -29,7 +31,7 @@ update patopay.profiles
 set display_name = 'attempted-cross-user-write'
 where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
-reset role;
+set role postgres;
 select is(
   (select display_name from patopay.profiles where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
   null,
@@ -39,7 +41,7 @@ select is(
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 update patopay.profiles set display_name = 'subject-a' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-reset role;
+set role postgres;
 select is(
   (select display_name from patopay.profiles where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
   'subject-a',

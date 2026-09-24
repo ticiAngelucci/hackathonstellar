@@ -1,4 +1,6 @@
 begin;
+set local role postgres;
+set local search_path = public, extensions, patopay;
 select plan(4);
 
 select has_function(
