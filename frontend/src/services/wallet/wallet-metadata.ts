@@ -1,10 +1,11 @@
+import {requireUserId} from '@/services/auth/auth.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {WalletAccount} from '@/services/wallet/types';
 
 const WALLET_METADATA_KEY='patopay:wallet:public-metadata:v1';
 
 export async function getWalletMetadata(){
-  const raw=await AsyncStorage.getItem(WALLET_METADATA_KEY);
+  const raw=await AsyncStorage.getItem(WALLET_METADATA_KEY+':'+await requireUserId());
   if(!raw)return null;
   try{
     return JSON.parse(raw) as WalletAccount;
@@ -13,6 +14,6 @@ export async function getWalletMetadata(){
   }
 }
 
-export function saveWalletMetadata(account:WalletAccount){
-  return AsyncStorage.setItem(WALLET_METADATA_KEY,JSON.stringify(account));
+export async function saveWalletMetadata(account:WalletAccount){
+  return AsyncStorage.setItem(WALLET_METADATA_KEY+':'+await requireUserId(),JSON.stringify(account));
 }

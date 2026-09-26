@@ -1,0 +1,9 @@
+// Hand-maintained from 20260920000300_create_backend_core.sql. NOT CLI-generated.
+export type ProfileRow={id:string;username:string|null;display_name:string|null;notifications_enabled:boolean;created_at:string;updated_at:string};
+export type WalletRow={id:string;user_id:string;provider:'mock'|'stellar';network:'mock'|'testnet';contract_address:string;wallet_wasm_hash:string|null;creation_tx_hash:string|null;status:'unverified'|'active'|'disabled';is_default:boolean;version:number;created_at:string;updated_at:string};
+export type EventRow={id:string;owner_id:string;name:string;status:'draft';version:number;created_at:string;updated_at:string};
+export type MemberRow={event_id:string;user_id:string;role:'owner'|'member';joined_at:string};
+export type AssetRow={id:string;network:'testnet';contract_address:string;code:string;decimals:number;enabled:boolean};
+export type RequestRow={id:string;requester_id:string;payer_id:string;source_wallet_id:string;destination_wallet_id:string;asset_id:string;amount_minor:number;memo:string|null;policy_version_id:string|null;policy_snapshot:Record<string,unknown>;status:'pending_approval'|'approved'|'rejected'|'expired'|'cancelled'|'blocked';version:number;created_at:string;updated_at:string};
+export type AttemptRow={id:string;payment_request_id:string;attempt_number:number;executor:'mock'|'stellar';mode:'mock'|'stellar';status:'prepared'|'submitting'|'submitted'|'confirmed'|'failed'|'unknown'|'simulated';tx_hash:string|null;error_code:string|null;created_at:string;updated_at:string};
+export type PolicyRow={id:string;user_id:string;version:number;auto_pay_limit_minor:number;approval_limit_minor:number;daily_limit_minor:number;recipient_mode:'any'|'allowlist';policy_contract_address:string|null;on_chain_revision:number|null;created_at:string};

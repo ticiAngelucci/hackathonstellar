@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -34,6 +35,7 @@ function authError(error?:string){
 
 export default function AppLock(){
   const {height}=useWindowDimensions();
+  const [configured,setConfigured]=useState(false);
   const [checking,setChecking]=useState(true);
   const [biometricAvailable,setBiometricAvailable]=useState(false);
   const [deviceSecurityAvailable,setDeviceSecurityAvailable]=useState(false);
@@ -68,7 +70,7 @@ export default function AppLock(){
         return;
       }
       await setAppLockEnabled(true);
-      router.push('/onboarding/complete');
+      if(DEMO_MODE)setConfigured(true);else router.push('/onboarding/complete');
     }catch{
       setError('No pudimos activar la protección de Pato Pay.');
     }finally{
@@ -78,18 +80,18 @@ export default function AppLock(){
 
   const skip=async()=>{
     await setAppLockEnabled(false);
-    router.push('/onboarding/complete');
+    router.push(DEMO_MODE?'/onboarding/wallet':'/onboarding/complete');
   };
 
   return (
     <OnboardingPage
       step={13}
-      actions={(
+      actions={configured?<PrimaryButton title="Continuar" onPress={()=>router.push('/onboarding/wallet')}/>:(
         <>
           <PrimaryButton
             disabled={checking||!biometricAvailable||authenticating!==null}
             icon="finger-print"
-            title={authenticating==='biometric'?'Verificando…':biometricAvailable?biometricLabel(types):'Biometría no disponible'}
+            title={DEMO_MODE?(authenticating?'Verificando...':'Activar Face ID'):authenticating==='biometric'?'Verificando…':biometricAvailable?biometricLabel(types):'Biometría no disponible'}
             onPress={()=>void enable('biometric')}
           />
           <PrimaryButton
@@ -105,8 +107,8 @@ export default function AppLock(){
         </>
       )}
     >
-      <OnboardingPato variant="agent" size={height<700?115:150}/>
-      <OnboardingCopy title="¿Querés proteger Pato Pay?" body="Podés pedir una verificación cada vez que abrís la aplicación."/>
+      <OnboardingPato variant={configured?"success":"agent"} size={height<700?115:150}/>
+      <OnboardingCopy title={configured?"Face ID configurado ✓":"Protegé Pato Pay"} body="Podés pedir una verificación cada vez que abrís la aplicación."/>
       <View style={styles.explanation}>
         <View style={styles.icon}><Ionicons name="lock-closed" size={21} color={colors.yellow}/></View>
         <View style={styles.copy}>

@@ -1,5 +1,7 @@
-import {useState} from 'react';
-import {router} from 'expo-router';
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
+import {useEffect,useRef,useState} from 'react';
+import {router,useLocalSearchParams} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,Text,View,useWindowDimensions} from 'react-native';
 import Animated,{FadeInDown} from 'react-native-reanimated';
@@ -37,21 +39,25 @@ export default function Passkey(){
       setAccount(wallet);
       setCreating(false);
     }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos proteger tu wallet.');
+      setError(userMessage(nextError,'No pudimos proteger tu wallet.'));
       setCreating(false);
     }
   };
 
+  const {create:autocreate}=useLocalSearchParams<{create?:string}>();
+  const started=useRef(false);
+  useEffect(()=>{if(DEMO_MODE&&autocreate==='true'&&!started.current){started.current=true;void create();}},[autocreate]);
+
   const actions=account
-    ?<PrimaryButton title="Continuar" onPress={()=>router.push('/onboarding/policy')}/>
-    :<PrimaryButton disabled={creating} title={creating?'Creando en Testnet…':'Crear wallet'} onPress={()=>void create()}/>;
+    ?<PrimaryButton title="Continuar" onPress={()=>router.push(DEMO_MODE?'/onboarding/complete':'/onboarding/policy')}/>
+    :<PrimaryButton disabled={creating} title={creating?'Preparando tu wallet...':'Crear wallet'} onPress={()=>void create()}/>;
 
   return (
     <OnboardingPage step={10} actions={actions}>
       <OnboardingPato variant={account?'success':'agent'} size={height<700?120:155}/>
       <OnboardingCopy
-        title={account?(account.status==='active'?'Tu wallet está lista.':'Modo demo listo.'):'Protegé tu wallet.'}
-        body={account
+        title={DEMO_MODE?(account?'Wallet creada ✓':'Preparando tu wallet...'):account?(account.status==='active'?'Tu wallet está lista.':'Modo demo listo.'):'Protegé tu wallet.'}
+        body={DEMO_MODE?'Tu wallet está lista para acompañarte.':account
           ?account.status==='active'
             ?'La smart wallet quedó confirmada en Stellar Testnet.'
             :'No se creó una wallet ni una passkey real. Cambiá a modo Stellar para probar blockchain.'
@@ -59,12 +65,12 @@ export default function Passkey(){
       />
       {account&&(
         <View style={styles.addressCard}>
-          <Text style={styles.addressLabel}>{account.status==='active'?'STELLAR TESTNET':'MODO MOCK'}</Text>
-          <Text selectable numberOfLines={1} style={styles.address}>{account.walletAddress.slice(0,10)}…{account.walletAddress.slice(-8)}</Text>
+          <Text style={styles.addressLabel}>{DEMO_MODE?'TU WALLET':account.status==='active'?'STELLAR TESTNET':'MODO MOCK'}</Text>
+          <Text selectable numberOfLines={1} style={styles.address}>{DEMO_MODE?'Lista para usar':`${account.walletAddress.slice(0,10)}…${account.walletAddress.slice(-8)}`}</Text>
           {account.creationTxHash&&<Text numberOfLines={1} style={styles.tx}>tx {account.creationTxHash.slice(0,12)}…{account.creationTxHash.slice(-8)}</Text>}
         </View>
       )}
-      {!account&&<>
+      {!account&&!DEMO_MODE&&<>
       <View style={styles.device}>
         <View style={styles.icon}><Ionicons name="finger-print" size={34} color={colors.yellow}/></View>
         <View style={styles.deviceCopy}><Text style={styles.deviceTitle}>Tu dispositivo crea la llave</Text><Text style={styles.deviceText}>{walletMode==='stellar'?'La clave privada queda dentro del gestor de passkeys del sistema.':'Estás en modo mock: este paso no crea una credencial real.'}</Text></View>

@@ -1,41 +1,33 @@
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useTransactions} from '@/hooks/useTransactions';
+import {LoadingCards} from '@/components/LoadingCards';
+import {userMessage} from '@/lib/errors';
+import {useFocusEffect} from 'expo-router';
+import {useCallback,useMemo,useState} from 'react';
 import {Ionicons} from '@expo/vector-icons';
-import {ActivityIndicator,Pressable,StyleSheet,Text,View} from 'react-native';
+import {Linking,Pressable,StyleSheet,Text,View} from 'react-native';
 import Animated,{FadeInDown,Layout} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {StatusBadge} from '@/components/StatusBadge';
-import {transactionService} from '@/services/appDataService';
-import {Transaction,TransactionStatus} from '@/types';
+import {TransactionStatus} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 type Filter='Todas'|'Pagos'|'Solicitudes'|'Auto';
 const filters:Filter[]=['Todas','Pagos','Solicitudes','Auto'];
 const allowedStatuses:Record<Exclude<Filter,'Todas'>,TransactionStatus[]>={
   Pagos:['paid','received'],
-  Solicitudes:['pending'],
+  Solicitudes:['pending','approved','rejected','blocked','expired','cancelled'],
   Auto:['auto'],
 };
 
 export default function Activity(){
   const [filter,setFilter]=useState<Filter>('Todas');
-  const [transactions,setTransactions]=useState<Transaction[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState<string|null>(null);
+  const query=useTransactions();
+  const transactions=useMemo(()=>query.data??[],[query.data]);
+  const loading=query.isLoading;const error=query.error?userMessage(query.error,'No pudimos cargar tu actividad.'):null;
+  const refresh=query.refetch;
   const visible=useMemo(()=>filter==='Todas'?transactions:transactions.filter(tx=>allowedStatuses[filter].includes(tx.status)),[filter,transactions]);
 
-  const refresh=useCallback(async()=>{
-    setLoading(true);
-    try{
-      setTransactions(await transactionService.list());
-      setError(null);
-    }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos cargar la actividad.');
-    }finally{
-      setLoading(false);
-    }
-  },[]);
-
-  useEffect(()=>{void refresh();},[refresh]);
+  useFocusEffect(useCallback(()=>{void refresh();},[refresh]));
 
   return (
     <Screen>
@@ -52,7 +44,7 @@ export default function Activity(){
       </View>
 
       <View style={styles.list}>
-        {loading&&<View style={styles.state}><ActivityIndicator color={colors.yellow}/><Text style={styles.stateText}>Cargando actividad…</Text></View>}
+        {loading&&<LoadingCards/>}
         {!loading&&error&&(
           <Animated.View entering={FadeInDown.duration(240)} style={styles.state}>
             <Ionicons name="cloud-offline-outline" size={22} color={colors.danger}/>
@@ -63,10 +55,10 @@ export default function Activity(){
         {!loading&&!error&&visible.length===0&&(
           <Animated.View entering={FadeInDown.duration(260)} style={styles.state}>
             <Ionicons name="receipt-outline" size={23} color={colors.muted}/>
-            <Text style={styles.stateText}>{transactions.length===0?'Todavía no hay movimientos reales.':'No hay movimientos con este filtro.'}</Text>
+            <Text style={styles.stateText}>{transactions.length===0?'Todavía no hay movimientos.':'No hay movimientos con este filtro.'}</Text>
           </Animated.View>
         )}
-        {!loading&&!error&&visible.map((tx,index)=>(
+        {visible.map((tx,index)=>(
           <Animated.View entering={FadeInDown.delay(index*45).duration(260)} layout={Layout.duration(200)} key={tx.id} style={[styles.row,index===visible.length-1&&styles.last]}>
             <View style={styles.icon}>
               <Ionicons name={tx.icon as keyof typeof Ionicons.glyphMap} size={20} color={colors.yellow}/>
@@ -74,9 +66,10 @@ export default function Activity(){
             <View style={styles.copy}>
               <Text numberOfLines={1} style={styles.name}>{tx.title}</Text>
               <Text style={styles.sub}>{tx.subtitle}</Text>
+              {tx.txHash&&/^[a-fA-F0-9]{64}$/.test(tx.txHash)&&<Pressable onPress={()=>void Linking.openURL(`https://stellar.expert/explorer/testnet/tx/${tx.txHash}`)}><Text style={styles.retry}>Ver en explorer →</Text></Pressable>}
             </View>
             <View style={styles.trailing}>
-              <Text style={[styles.amount,tx.amount>0&&styles.income]}>{tx.amount>0?'+':''}{tx.amount.toFixed(2)} USDC</Text>
+              <Text style={[styles.amount,tx.amount>0&&styles.income]}>{tx.displayAmount??`${tx.amount>0?'+':''}${tx.amount.toFixed(2)}`} {tx.assetCode??'USDC'}</Text>
               <StatusBadge status={tx.status}/>
             </View>
           </Animated.View>

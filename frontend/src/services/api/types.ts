@@ -1,0 +1,9 @@
+export type ApiProfile={id:string;username:string|null;display_name:string|null;notifications_enabled:boolean};
+export type ApiPublicProfile=Pick<ApiProfile,'id'|'username'|'display_name'>;
+export type ApiEvent={id:string;name:string;creator_id:string;status:'draft';created_at:string;participants:{user_id:string;display_name:string}[]};
+export type ApiWallet={id:string;provider:'mock'|'stellar';network:'mock'|'testnet';contract_address:string;wallet_wasm_hash:string|null;creation_tx_hash:string|null;status:'unverified'|'active'|'disabled';is_default:boolean;version:number};
+export type ApiPolicy={id:string;version:number;auto_pay_limit_minor:string;approval_limit_minor:string;daily_limit_minor:string;recipient_mode:'any'|'allowlist';allowed_recipient_ids:string[];allowed_asset_ids:string[]};
+export type ApiRequestStatus='pending_approval'|'approved'|'rejected'|'expired'|'cancelled'|'blocked';
+export type ApiPaymentRequest={id:string;requester_id:string;payer_id:string;asset_id:string;amount_minor:string;memo:string|null;status:ApiRequestStatus};
+export type ApiPaymentCreated={id:string;status:ApiRequestStatus;amount_minor:string;asset_id:string;policy_outcome:string;reason_code:string;next_action:string|null};
+export type ApiSubscription={service_id:string;enabled:boolean;updated_at:string};

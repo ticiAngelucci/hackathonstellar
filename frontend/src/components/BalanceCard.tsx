@@ -4,7 +4,7 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {Pressable,StyleSheet,Text,View} from 'react-native';
 import {colors,gradients,radius,spacing,typography} from '@/constants/theme';
 
-export function BalanceCard({balance,assetCode='USDC',onAdd}:{balance:number;assetCode?:string;onAdd?:()=>void}){
+export function BalanceCard({balance,assetCode='USDC',onAdd}:{balance:number|null;assetCode?:string;onAdd?:()=>void}){
   return (
     <LinearGradient colors={gradients.balance} style={styles.card}>
       <View style={styles.top}>
@@ -21,7 +21,7 @@ export function BalanceCard({balance,assetCode='USDC',onAdd}:{balance:number;ass
         </Pressable>
       </View>
       <View style={styles.row}>
-        <Text style={styles.amount}>{balance.toFixed(2)}</Text>
+        <Text style={styles.amount}>{balance?.toFixed(2)??'—'}</Text>
         <Text style={styles.asset}>{assetCode}</Text>
       </View>
     </LinearGradient>

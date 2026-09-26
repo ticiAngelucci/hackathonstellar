@@ -1,11 +1,15 @@
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useGroups,useCreateGroup} from '@/hooks/useGroups';
+import {userMessage} from '@/lib/errors';
+import {LoadingCards} from '@/components/LoadingCards';
+import {DEMO_MODE} from '@/demo/demo.config';
+import {useMemo,useState} from 'react';
 import {Ionicons} from '@expo/vector-icons';
-import {ActivityIndicator,KeyboardAvoidingView,Modal,Platform,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
-import Animated,{FadeIn,FadeInDown,FadeOut} from 'react-native-reanimated';
+import {KeyboardAvoidingView,Modal,Platform,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
+import Animated,{FadeInDown} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {GroupCard} from '@/components/GroupCard';
 import {PrimaryButton} from '@/components/PrimaryButton';
-import {eventService,PatoPayEvent} from '@/services/eventService';
+import {PatoPayEvent} from '@/services/eventService';
 import {Group} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
@@ -16,7 +20,8 @@ function eventToGroup(event:PatoPayEvent,index:number):Group{
     id:event.id,
     name:event.name,
     members:event.participants.length,
-    balance:0,
+    membersVisible:event.membersVisible,
+    balance:event.balance??0,
     stakingApy:0,
     imageKey:imageKeys[index%imageKeys.length],
   };
@@ -24,29 +29,15 @@ function eventToGroup(event:PatoPayEvent,index:number):Group{
 
 export default function Groups(){
   const [query,setQuery]=useState('');
-  const [remoteGroups,setRemoteGroups]=useState<Group[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [apiError,setApiError]=useState<string|null>(null);
+  const groups=useGroups();const create=useCreateGroup();
+  const remoteGroups=useMemo(()=>(groups.data??[]).map(eventToGroup),[groups.data]);
+  const loading=groups.isLoading;
+  const apiError=groups.error?userMessage(groups.error,'No pudimos cargar tus grupos.'):null;
+  const refresh=groups.refetch;
   const [modalVisible,setModalVisible]=useState(false);
   const [groupName,setGroupName]=useState('');
   const [creating,setCreating]=useState(false);
   const [createError,setCreateError]=useState<string|null>(null);
-
-  const refresh=useCallback(async()=>{
-    try{
-      const events=await eventService.list();
-      setRemoteGroups(events.map(eventToGroup));
-      setApiError(null);
-    }catch(error){
-      setApiError(error instanceof Error?error.message:'No pudimos conectar con PatoPay.');
-    }finally{
-      setLoading(false);
-    }
-  },[]);
-
-  useEffect(()=>{
-    void refresh();
-  },[refresh]);
 
   const visibleGroups=useMemo(()=>{
     const normalized=query.trim().toLocaleLowerCase();
@@ -70,13 +61,11 @@ export default function Groups(){
     setCreating(true);
     setCreateError(null);
     try{
-      const event=await eventService.create(name);
-      setRemoteGroups(current=>[...current,eventToGroup(event,current.length)]);
-      setApiError(null);
+      await create.mutateAsync(name);
       setGroupName('');
       setModalVisible(false);
     }catch(error){
-      setCreateError(error instanceof Error?error.message:'No pudimos crear el grupo.');
+      setCreateError(userMessage(error,'No pudimos crear el grupo.'));
     }finally{
       setCreating(false);
     }
@@ -121,18 +110,14 @@ export default function Groups(){
         )}
 
         <View style={styles.list}>
-          {loading&&(
-            <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(160)} style={styles.loading}>
-              <ActivityIndicator color={colors.yellow}/>
-              <Text style={styles.loadingText}>Cargando grupos desde Supabase…</Text>
-            </Animated.View>
-          )}
+          {loading&&<LoadingCards/>}
           {visibleGroups.map((group,index)=><GroupCard key={group.id} group={group} index={index}/>) }
           {!loading&&!apiError&&visibleGroups.length===0&&(
             <Animated.View entering={FadeInDown.duration(280)} style={styles.emptyState}>
               <View style={styles.emptyIcon}><Ionicons name="people-outline" size={24} color={colors.yellow}/></View>
-              <Text style={styles.emptyTitle}>{query?'No encontramos ese grupo':'Todavía no hay grupos'}</Text>
-              <Text style={styles.empty}>{query?'Probá con otro nombre.':'Creá el primero y se guardará en Supabase.'}</Text>
+              <Text style={styles.emptyTitle}>{query?'No encontramos ese grupo':'Parece que todavía no tenés grupos.'}</Text>
+              <PrimaryButton title="Crear grupo" onPress={()=>setModalVisible(true)}/>
+              <Text style={styles.empty}>{query?'Probá con otro nombre.':'Creá tu primer grupo para compartir gastos.'}</Text>
             </Animated.View>
           )}
         </View>
@@ -145,7 +130,7 @@ export default function Groups(){
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Nuevo grupo</Text>
-                <Text style={styles.modalSubtitle}>Se guardará directamente en Supabase.</Text>
+                <Text style={styles.modalSubtitle}>{DEMO_MODE?'Organizá un nuevo fondo común.':'Se guardará directamente en Supabase.'}</Text>
               </View>
               <Pressable accessibilityLabel="Cerrar" onPress={closeModal} style={styles.closeButton}>
                 <Ionicons name="close" size={21} color={colors.text}/>

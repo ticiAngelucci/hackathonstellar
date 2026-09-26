@@ -1,3 +1,4 @@
+import {DemoBadge} from './DemoBadge';
 import {useMinimizeOnScroll} from 'expo-glass-tabs';
 import {PropsWithChildren} from 'react';
 import {StyleProp,StyleSheet,View,ViewStyle} from 'react-native';
@@ -15,14 +16,14 @@ export function Screen({children,scroll=true,contentStyle}:ScreenProps){
 
   if(!scroll){
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe}><DemoBadge/>
         <View style={[styles.content,styles.fixed,contentStyle]}>{children}</View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe}><DemoBadge/>
       <Animated.ScrollView
         contentContainerStyle={[styles.content,contentStyle]}
         onScroll={onScroll}

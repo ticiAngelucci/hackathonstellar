@@ -3,6 +3,12 @@ import {TransactionStatus} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 const statusConfig:Record<TransactionStatus,{label:string;color:string}>={
+  approved:{label:'Aprobado',color:colors.yellow},
+  processing:{label:'Procesando',color:colors.yellow},
+  failed:{label:'Fallido',color:colors.danger},
+  rejected:{label:'Rechazado',color:colors.muted},
+  expired:{label:'Vencido',color:colors.muted},
+  cancelled:{label:'Cancelado',color:colors.muted},
   pending:{label:'Pendiente',color:colors.yellow},
   paid:{label:'Pagado',color:colors.success},
   auto:{label:'Auto',color:colors.success},

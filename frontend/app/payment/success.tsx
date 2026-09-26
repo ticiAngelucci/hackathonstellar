@@ -1,3 +1,5 @@
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect,useState} from 'react';
 import {router,useLocalSearchParams} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -21,6 +23,7 @@ export default function Success(){
     recipient?:string;
   }>();
   const blockchainFlow=Boolean(txHash);
+  const [showDemoExplorer,setShowDemoExplorer]=useState(false);
   const [transaction,setTransaction]=useState<Transaction|null>(null);
   const [confirmed,setConfirmed]=useState(false);
   const [explorerUrl,setExplorerUrl]=useState('');
@@ -59,9 +62,15 @@ export default function Success(){
       if(id){
         const result=await transactionService.get(id);
         if(!active)return;
-        if(!result.txHash||(result.status!=='paid'&&result.status!=='auto')){
+        if(!result.txHash||(result.status!=='paid'&&result.status!=='auto'&&result.status!=='received')){
           setError('La transacción todavía no está confirmada.');
           return;
+        }
+        if(!DEMO_MODE){
+          const chain=await walletService.getTransactionStatus(result.txHash);
+          if(!active)return;
+          if(chain.status!=='success'){setError('El pago todavía no tiene confirmación en Stellar.');return;}
+          setExplorerUrl(chain.explorerUrl);
         }
         setTransaction(result);
         setConfirmed(true);
@@ -70,7 +79,7 @@ export default function Success(){
     };
 
     validate()
-      .catch(nextError=>{if(active)setError(nextError instanceof Error?nextError.message:'No pudimos validar la transacción.');})
+      .catch(nextError=>{if(active)setError(userMessage(nextError,'No pudimos confirmar el pago.'));})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   },[id,txHash]);
@@ -87,8 +96,8 @@ export default function Success(){
       <Screen scroll={false} contentStyle={styles.screen}>
         <View style={styles.content}>
           {loading?<ActivityIndicator size="large" color={colors.yellow}/>:<View style={styles.invalidIcon}><Ionicons name="alert-circle-outline" size={30} color={colors.yellow}/></View>}
-          <Text style={styles.invalidTitle}>{loading?'Confirmando en Stellar…':'Sin confirmación'}</Text>
-          <Text style={styles.invalidText}>{loading?'Consultando el estado real de la transacción.':error??'No encontramos una transacción confirmada.'}</Text>
+          <Text style={styles.invalidTitle}>{loading?'Confirmando tu pago…':'Sin confirmación'}</Text>
+          <Text style={styles.invalidText}>{loading?'Consultando el estado del pago.':error??'No encontramos una transacción confirmada.'}</Text>
         </View>
         <PrimaryButton title="Volver al inicio" onPress={()=>router.replace('/(tabs)')}/>
       </Screen>
@@ -96,10 +105,10 @@ export default function Success(){
   }
 
   const shownAmount=blockchainFlow?amount??'0':Math.abs(transaction?.amount??0).toFixed(2);
-  const shownAsset=blockchainFlow?asset??'XLM':'USDC';
+  const shownAsset=blockchainFlow?asset??'XLM':transaction?.assetCode??'USDC';
   const shownRecipient=blockchainFlow
     ?recipient?`${recipient.slice(0,9)}…${recipient.slice(-7)}`:'Stellar Testnet'
-    :transaction?.title??'Pago';
+    :transaction?.title==='Asado del viernes'?'del asado del viernes':transaction?.title??'Pago';
 
   return (
     <Screen scroll={false} contentStyle={styles.screen}>
@@ -110,13 +119,14 @@ export default function Success(){
         <View style={styles.card}>
           <Animated.View style={[styles.check,checkEntrance]}><Ionicons name="checkmark" size={28} color={colors.bg}/></Animated.View>
           <View style={styles.cardCopy}>
-            <Text style={styles.cardTitle}>{blockchainFlow?'Confirmada en Stellar Testnet':'Transacción completada'}</Text>
-            {txHash&&<Text numberOfLines={1} style={styles.hash}>{txHash.slice(0,12)}…{txHash.slice(-10)}</Text>}
-            {explorerUrl&&(
-              <Pressable onPress={()=>void Linking.openURL(explorerUrl)}>
-                <Text style={styles.link}>Ver en explorer →</Text>
+            <Text style={styles.cardTitle}>{DEMO_MODE?'Transacción completada':blockchainFlow?'Confirmada en Stellar Testnet':'Transacción completada'}</Text>
+            {!DEMO_MODE&&(txHash||transaction?.txHash)&&<Text numberOfLines={1} style={styles.hash}>{DEMO_MODE?(txHash??transaction?.txHash):`${txHash?.slice(0,12)}…${txHash?.slice(-10)}`}</Text>}
+            {(explorerUrl||DEMO_MODE)&&(
+              <Pressable onPress={()=>DEMO_MODE?setShowDemoExplorer(true):void Linking.openURL(explorerUrl)}>
+                <Text style={styles.link}>{DEMO_MODE?'Ver detalle →':'Ver en explorer →'}</Text>
               </Pressable>
             )}
+            {showDemoExplorer&&<Text style={styles.hash}>Pago completado · {shownAmount} {shownAsset}</Text>}
           </View>
         </View>
       </View>

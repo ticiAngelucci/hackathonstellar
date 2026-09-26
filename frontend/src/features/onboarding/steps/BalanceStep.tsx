@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect} from 'react';
 import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,Text,View} from 'react-native';
@@ -25,9 +26,9 @@ export function BalanceStep({active,onActivate}:{active:boolean;onActivate:()=>v
       <PatoSpeech>Primero: tu plata no tiene por qué quedarse quieta.</PatoSpeech>
       <AnimatedPressable accessibilityRole="button" onPress={activate} style={[styles.balanceCard,active&&styles.activeCard,cardStyle]}>
         <View>
-          <Text style={styles.example}>EJEMPLO</Text>
+          <Text style={styles.example}>{DEMO_MODE?'TU SALDO':'EJEMPLO'}</Text>
           <Text style={styles.balance}>100 <Text style={styles.asset}>USDC</Text></Text>
-          <Text style={styles.hint}>{active?'Tu saldo está participando':'Tocá tu saldo para activarlo'}</Text>
+          <Text style={styles.hint}>{DEMO_MODE?(active?'+ rendimiento':'Tocá tu saldo para activarlo'):'Staking disponible próximamente'}</Text>
         </View>
         <View style={styles.chart}>
           {[18,29,42,56].map((height,index)=><Animated.View key={height} style={[styles.bar,{height,opacity:.45+index*.15},barStyle]}/>) }
@@ -36,10 +37,10 @@ export function BalanceStep({active,onActivate}:{active:boolean;onActivate:()=>v
       {active&&(
         <Animated.View entering={FadeInDown.springify().damping(15)} style={styles.feedback}>
           <Ionicons name="leaf" size={18} color={colors.success}/>
-          <View style={styles.feedbackCopy}><Text style={styles.feedbackTitle}>Staking activo</Text><Text style={styles.feedbackText}>Mientras no la usás, tu saldo puede generar rendimiento.</Text></View>
+          <View style={styles.feedbackCopy}><Text style={styles.feedbackTitle}>{DEMO_MODE?'Staking activo':'Disponible próximamente'}</Text><Text style={styles.feedbackText}>{DEMO_MODE?'Mientras no la usás, tu saldo puede generar rendimiento.':'Esta función todavía no está habilitada.'}</Text></View>
         </Animated.View>
       )}
-      {!active&&<Text style={styles.disclaimer}>Ejemplo educativo. No implica rendimiento garantizado.</Text>}
+      {!DEMO_MODE&&<Text style={styles.disclaimer}>Ejemplo educativo. No implica rendimiento garantizado.</Text>}
     </>
   );
 }

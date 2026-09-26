@@ -1,49 +1,23 @@
-import {useEffect,useState} from 'react';
-import {ActivityIndicator,StyleSheet,Text,View} from 'react-native';
+import {DEMO_MODE} from '@/demo/demo.config';
+import {useAutomaticServices,useSetAutomaticService} from '@/hooks/useAutomaticServices';
+import {userMessage} from '@/lib/errors';
+import {LoadingCards} from '@/components/LoadingCards';
+import {PrimaryButton} from '@/components/PrimaryButton';
+import {StyleSheet,Text,View} from 'react-native';
 import Animated,{FadeInDown} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {AppHeader} from '@/components/AppHeader';
 import {PatoAgent} from '@/components/PatoAgent';
 import {ServiceRow} from '@/components/ServiceRow';
 import {serviceCatalog} from '@/constants/serviceCatalog';
-import {subscriptionService} from '@/services/appDataService';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 export default function Services(){
-  const [items,setItems]=useState(serviceCatalog);
-  const [loading,setLoading]=useState(true);
-  const [savingId,setSavingId]=useState<string|null>(null);
-  const [error,setError]=useState<string|null>(null);
-
-  useEffect(()=>{
-    let active=true;
-    subscriptionService.list()
-      .then(states=>{
-        if(!active)return;
-        setItems(serviceCatalog.map(service=>({...service,enabled:states.get(service.id)??false})));
-        setError(null);
-      })
-      .catch(nextError=>{
-        if(active)setError(nextError instanceof Error?nextError.message:'No pudimos cargar los servicios.');
-      })
-      .finally(()=>{if(active)setLoading(false);});
-    return ()=>{active=false;};
-  },[]);
-
-  const toggle=async(id:string)=>{
-    const service=items.find(item=>item.id===id);
-    if(!service||savingId)return;
-    setSavingId(id);
-    setError(null);
-    try{
-      const enabled=await subscriptionService.set(id,!service.enabled);
-      setItems(current=>current.map(item=>item.id===id?{...item,enabled}:item));
-    }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos guardar el servicio.');
-    }finally{
-      setSavingId(null);
-    }
-  };
+  const query=useAutomaticServices();const mutation=useSetAutomaticService();
+  const items=serviceCatalog.map(service=>({...service,amount:DEMO_MODE?service.amount:undefined,enabled:query.data?.get(service.id)??false}));
+  const loading=query.isLoading;const savingId=mutation.isPending?mutation.variables?.id:null;
+  const error=query.error||mutation.error;
+  const toggle=(id:string)=>{const service=items.find(s=>s.id===id);if(service&&!mutation.isPending)mutation.mutate({id,enabled:!service.enabled});};
 
   return (
     <Screen>
@@ -51,13 +25,13 @@ export default function Services(){
       <Animated.View entering={FadeInDown.duration(340)} style={styles.hero}>
         <View style={styles.heroCopy}>
           <Text style={styles.title}>Automatizá tus pagos</Text>
-          <Text style={styles.sub}>Conectá tus servicios y Pato los paga automáticamente por vos.</Text>
+          <Text style={styles.sub}>{DEMO_MODE?'Conectá tus servicios y Pato los paga automáticamente por vos.':'Guardá qué servicios querés automatizar. La ejecución de cobros estará disponible próximamente.'}</Text>
         </View>
         <PatoAgent size={124}/>
       </Animated.View>
 
-      {loading&&<View style={styles.status}><ActivityIndicator color={colors.yellow}/><Text style={styles.statusText}>Sincronizando con Supabase…</Text></View>}
-      {!loading&&error&&<Animated.Text entering={FadeInDown.duration(220)} style={styles.error}>{error}</Animated.Text>}
+      {loading&&<LoadingCards/>}
+      {!!error&&<><Text style={styles.error}>{userMessage(error,'No pudimos actualizar tus servicios.')}</Text><PrimaryButton title="Reintentar" onPress={()=>void query.refetch()}/></>}
 
       <View style={styles.list}>
         {items.map((service,index)=>(
@@ -65,7 +39,7 @@ export default function Services(){
             <ServiceRow
               service={service}
               last={index===items.length-1}
-              disabled={loading||savingId!==null}
+              disabled={loading||savingId!==null||!query.data}
               onToggle={()=>void toggle(service.id)}
             />
           </Animated.View>

@@ -1,7 +1,15 @@
-import {useCallback,useEffect,useState} from 'react';
-import {router} from 'expo-router';
+import {useTransactions} from '@/hooks/useTransactions';
+import {useWalletBalance} from '@/hooks/useWalletBalance';
+import {LoadingCards} from '@/components/LoadingCards';
+import {userMessage} from '@/lib/errors';
+import {usePaymentRequests} from '@/hooks/usePaymentRequests';
+import {useProfile} from '@/hooks/useProfile';
+import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
+import {DEMO_MODE} from '@/demo/demo.config';
+import {useCallback} from 'react';
+import {router,useFocusEffect} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
-import {ActivityIndicator,Pressable,StyleSheet,Text,View} from 'react-native';
+import {Pressable,StyleSheet,Text,View} from 'react-native';
 import Animated,{FadeInDown} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {PatoAvatar} from '@/components/PatoAvatar';
@@ -10,65 +18,47 @@ import {BalanceCard} from '@/components/BalanceCard';
 import {ActionButton} from '@/components/ActionButton';
 import {AnimatedCard} from '@/components/AnimatedCard';
 import {SectionHeader} from '@/components/SectionHeader';
-import {transactionService} from '@/services/appDataService';
-import {walletService} from '@/services/wallet';
-import {Transaction} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 export default function Home(){
-  const [balance,setBalance]=useState(0);
-  const [assetCode,setAssetCode]=useState('XLM');
-  const [walletAddress,setWalletAddress]=useState<string|null>(null);
-  const [walletFunded,setWalletFunded]=useState<boolean|null>(null);
-  const [transactions,setTransactions]=useState<Transaction[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [dataError,setDataError]=useState<string|null>(null);
-  const displayName=process.env.EXPO_PUBLIC_PATOPAY_DISPLAY_NAME??'Negro';
+  const wallet=useWalletBalance();const activity=useTransactions();
+  const balance=wallet.isError||wallet.isLoading?null:wallet.data?.balance?.amount??null;
+  const assetCode=wallet.data?.balance?.assetCode??'';
+  const walletAddress=wallet.data?.address;
+  const walletFunded=wallet.data?.balance?.funded;
+  const transactions=(activity.data??[]).slice(0,3);const loading=activity.isLoading;
+  const dataError=activity.error?userMessage(activity.error,'No pudimos cargar tu actividad.'):null;
+  const {profile}=useOnboarding();
+  const remoteProfile=useProfile();
+  const requests=usePaymentRequests();
+  const displayName=(DEMO_MODE?profile.displayName:remoteProfile.data?.displayName??'').trim();
 
-  const refresh=useCallback(async()=>{
-    setLoading(true);
-    const account=await walletService.getAccount().catch(()=>null);
-    setWalletAddress(account?.walletAddress??null);
+  const {refetch:refreshWallet}=wallet;const {refetch:refreshActivity}=activity;
+  const refresh=useCallback(async()=>{await Promise.all([refreshWallet(),refreshActivity()]);},[refreshWallet,refreshActivity]);
 
-    const [balanceResult,transactionsResult]=await Promise.allSettled([
-      account?walletService.getBalance(account.walletAddress):Promise.resolve(null),
-      transactionService.list(3),
-    ]);
-    const errors:string[]=[];
-    if(balanceResult.status==='fulfilled'&&balanceResult.value){
-      setBalance(balanceResult.value.amount);
-      setAssetCode(balanceResult.value.assetCode);
-      setWalletFunded(balanceResult.value.funded);
-    }else if(balanceResult.status==='rejected'){
-      errors.push(balanceResult.reason instanceof Error?balanceResult.reason.message:'No pudimos consultar Stellar.');
-    }
-    if(transactionsResult.status==='fulfilled')setTransactions(transactionsResult.value);
-    else errors.push(transactionsResult.reason instanceof Error?transactionsResult.reason.message:'No pudimos cargar la actividad.');
-    setDataError(errors.length?errors.join(' '):null);
-    setLoading(false);
-  },[]);
-
-  useEffect(()=>{void refresh();},[refresh]);
+  useFocusEffect(useCallback(()=>{void refresh();},[refresh]));
 
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.header}>
         <PatoAvatar size={46}/>
         <View style={styles.headerCopy}>
-          <Text style={styles.hello}>Hola, {displayName} 👋</Text>
+          <Text style={styles.hello}>Hola{displayName?`, ${displayName}`:''} 👋</Text>
           <Text style={styles.sub}>Todo en orden por acá.</Text>
         </View>
-        <Pressable accessibilityLabel="Notificaciones" style={({pressed})=>[styles.bell,pressed&&styles.pressed]}>
+        <Pressable onPress={()=>router.push('/payment/request')} accessibilityLabel="Notificaciones" style={({pressed})=>[styles.bell,pressed&&styles.pressed]}>
           <Ionicons name="notifications-outline" size={21} color={colors.text}/>
         </Pressable>
       </View>
 
       <BalanceCard balance={balance} assetCode={assetCode} onAdd={()=>router.push('/fund')}/>
+      {wallet.data?.notice&&<Text style={styles.stateText}>{wallet.data.notice}</Text>}
+      {wallet.error&&<Text style={styles.stateText}>{userMessage(wallet.error,'No pudimos consultar tu saldo.')}</Text>}
       {walletAddress&&walletFunded===false&&<Text style={styles.unfunded}>Tu wallet está creada, pero todavía no tiene fondos.</Text>}
 
       <View style={styles.actions}>
-        <ActionButton compact disabled={!walletAddress} icon="arrow-up" label="Enviar" onPress={()=>router.push('/payment/send')}/>
-        <ActionButton compact icon="arrow-down" label="Recibir" onPress={()=>router.push('/fund')}/>
+        <ActionButton compact disabled={!wallet.data?.canSign} icon="arrow-up" label="Enviar" onPress={()=>router.push('/payment/send')}/>
+        <ActionButton compact icon={DEMO_MODE?"people":"arrow-down"} label={DEMO_MODE?"Grupos":"Recibir"} onPress={()=>router.push(DEMO_MODE?'/(tabs)/groups':'/fund')}/>
         <ActionButton compact icon="people" label="Servicios" onPress={()=>router.push('/services')}/>
         <ActionButton compact icon="ellipsis-horizontal" label="Más" onPress={()=>router.push('/permissions')}/>
       </View>
@@ -84,9 +74,10 @@ export default function Home(){
         </View>
       </AnimatedCard>
 
+      {!DEMO_MODE&&<AnimatedCard onPress={()=>router.push('/payment/request')} style={{padding:spacing.md,marginBottom:spacing.md}}><Text style={{color:colors.text}}>Solicitudes de pago</Text><Text style={{color:colors.muted}}>{requests.error?'No pudimos actualizar tus solicitudes. Tocá para reintentar.':`${requests.data?.filter(r=>r.status==='pending').length??0} pendientes`}</Text></AnimatedCard>}
       <SectionHeader compact title="Actividad reciente" action="Ver todo ›" onPress={()=>router.push('/(tabs)/activity')}/>
       <AnimatedCard delay={180} style={styles.activityCard}>
-        {loading&&<View style={styles.activityState}><ActivityIndicator color={colors.yellow}/><Text style={styles.stateText}>Actualizando…</Text></View>}
+        {loading&&<LoadingCards/>}
         {!loading&&dataError&&(
           <Animated.View entering={FadeInDown.duration(240)} style={styles.activityState}>
             <Ionicons name="cloud-offline-outline" size={20} color={colors.danger}/>
@@ -97,10 +88,10 @@ export default function Home(){
         {!loading&&!dataError&&transactions.length===0&&(
           <Animated.View entering={FadeInDown.duration(260)} style={styles.activityState}>
             <Ionicons name="receipt-outline" size={21} color={colors.muted}/>
-            <Text style={styles.stateText}>Todavía no hay movimientos reales.</Text>
+            <Text style={styles.stateText}>Todavía no hay movimientos.</Text>
           </Animated.View>
         )}
-        {!loading&&!dataError&&transactions.map((tx,index)=>(
+        {transactions.map((tx,index)=>(
           <View key={tx.id} style={[styles.transaction,index===transactions.length-1&&styles.lastTransaction]}>
             <View style={styles.txIcon}>
               <Ionicons name={tx.icon as keyof typeof Ionicons.glyphMap} size={18} color={index===1?colors.success:colors.blueBright}/>
@@ -109,7 +100,7 @@ export default function Home(){
               <Text numberOfLines={1} style={styles.txTitle}>{tx.title}</Text>
               <Text style={styles.txSub}>{tx.subtitle}</Text>
             </View>
-            <Text style={[styles.amount,tx.amount>0&&styles.income]}>{tx.amount>0?'+':''}{tx.amount.toFixed(2)} USDC</Text>
+            <Text style={[styles.amount,tx.amount>0&&styles.income]}>{tx.displayAmount??`${tx.amount>0?'+':''}${tx.amount.toFixed(2)}`} {tx.assetCode??'USDC'}</Text>
           </View>
         ))}
       </AnimatedCard>

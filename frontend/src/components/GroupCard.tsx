@@ -21,7 +21,7 @@ export function GroupCard({group,index=0}:{group:Group;index?:number}){
       <Image source={groupImages[imageKey]??groupImages.asado} style={styles.thumbnail} resizeMode="cover"/>
       <View style={styles.copy}>
         <Text style={styles.name}>{group.name}</Text>
-        <Text style={styles.meta}>{group.members} personas</Text>
+        <Text style={styles.meta}>{group.membersVisible===false?'Grupo compartido':`${group.members} personas`}</Text>
       </View>
       <Ionicons name="chevron-forward" color={colors.blueBright} size={18}/>
     </AnimatedCard>

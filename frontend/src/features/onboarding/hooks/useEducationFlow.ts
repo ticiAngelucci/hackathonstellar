@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {router} from 'expo-router';
 import {useState} from 'react';
 import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
@@ -9,7 +10,7 @@ export function useEducationFlow(){
 
   const next=()=>{
     setDirection('forward');
-    if(step<6)updateProfile({educationStep:step+1});
+    if(step<(DEMO_MODE?5:6))updateProfile({educationStep:step+1});
     else router.push('/onboarding/name');
   };
 

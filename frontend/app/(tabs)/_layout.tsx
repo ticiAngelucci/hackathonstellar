@@ -1,3 +1,6 @@
+import {Text} from 'react-native';
+import {useRealtimeUpdates} from '@/hooks/useRealtimeUpdates';
+import {AuthBoundary} from '@/features/auth/AuthProvider';
 import {useRouter} from 'expo-router';
 import {TabList,TabSlot,TabTrigger,Tabs} from 'expo-router/ui';
 import {TabBarMinimizeProvider,renderFadingTabScreen} from 'expo-glass-tabs';
@@ -18,9 +21,11 @@ const ITEMS:(GlassTabItem&{href:TabHref})[]=[
 
 export default function Layout(){
   const router=useRouter();
+  const realtime=useRealtimeUpdates();
 
   return (
-    <GestureHandlerRootView style={{flex:1}}>
+    <AuthBoundary><GestureHandlerRootView style={{flex:1}}>
+      {realtime.enabled&&!realtime.connected&&<Text style={{color:colors.muted,textAlign:'center',fontSize:11}}>Conectando actualizaciones en vivo…</Text>}
       <TabBarMinimizeProvider>
         <Tabs>
           <TabSlot renderFn={renderFadingTabScreen} style={{height:'100%'}}/>
@@ -45,6 +50,6 @@ export default function Layout(){
           </TabList>
         </Tabs>
       </TabBarMinimizeProvider>
-    </GestureHandlerRootView>
+    </GestureHandlerRootView></AuthBoundary>
   );
 }

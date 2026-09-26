@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -11,7 +12,7 @@ import {colors,radius,spacing,typography} from '@/constants/theme';
 
 const actions=[
   {title:'Mis reglas',subtitle:'Límites y permisos de pago',icon:'options' as const,route:'/permissions' as const},
-  {title:'Automatizaciones',subtitle:'Servicios que Pato paga por vos',icon:'flash' as const,route:'/services' as const},
+  {title:'Automatizaciones',subtitle:DEMO_MODE?'Servicios que Pato paga por vos':'Preferencias de servicios',icon:'flash' as const,route:'/services' as const},
 ];
 
 export default function Pato(){
@@ -37,10 +38,10 @@ export default function Pato(){
         </Animated.View>
         <Animated.View entering={FadeInDown.delay(100).duration(320)} style={s.badge}>
           <View style={s.dot}/>
-          <Text style={s.badgeText}>AGENTE ACTIVO</Text>
+          <Text style={s.badgeText}>{DEMO_MODE?'AGENTE ACTIVO':'TUS REGLAS'}</Text>
         </Animated.View>
         <Animated.Text entering={FadeInDown.delay(150).duration(320)} style={s.title}>Hola, soy Pato.</Animated.Text>
-        <Animated.Text entering={FadeInDown.delay(200).duration(320)} style={s.sub}>Vos ponés las reglas. Yo me ocupo del resto.</Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(200).duration(320)} style={s.sub}>{DEMO_MODE?'Vos ponés las reglas. Yo me ocupo del resto.':'Configurá tus reglas y preferencias de pago.'}</Animated.Text>
       </View>
 
       <SectionHeader title="¿Qué hacemos?"/>

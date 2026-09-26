@@ -1,3 +1,5 @@
+import {DEMO_MODE} from '@/demo/demo.config';
+import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
 import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,Text,View} from 'react-native';
 import Animated,{FadeInDown,Layout} from 'react-native-reanimated';
@@ -8,9 +10,10 @@ export type FundChoice='Viaje'|'Casa'|'Asado'|'Proyecto';
 const choices:FundChoice[]=['Viaje','Casa','Asado','Proyecto'];
 
 export function SharedFundStep({selected,onSelect}:{selected:FundChoice|null;onSelect:(choice:FundChoice)=>void}){
+  const {profile}=useOnboarding();
   return (
     <>
-      <PatoSpeech>¿Compartís gastos con otras personas?</PatoSpeech>
+      <PatoSpeech>¿Y si ahorrás con amigos?</PatoSpeech>
       <View style={styles.choices}>
         {choices.map((choice,index)=>(
           <Animated.View key={choice} entering={FadeInDown.delay(70+index*45).duration(260)} style={styles.choiceWrap}>
@@ -22,13 +25,13 @@ export function SharedFundStep({selected,onSelect}:{selected:FundChoice|null;onS
       </View>
       {selected&&(
         <Animated.View entering={FadeInDown.springify().damping(17)} layout={Layout.springify()} style={styles.fund}>
-          <View style={styles.fundHeader}><View style={styles.icon}><Ionicons name={selected==='Viaje'?'airplane':selected==='Casa'?'home':selected==='Asado'?'restaurant':'briefcase'} size={20} color={colors.yellow}/></View><Text style={styles.fundName}>{selected==='Viaje'?'Viaje Bariloche':`Fondo ${selected}`}</Text><Text style={styles.tag}>FONDO COMÚN</Text></View>
-          {[['Tici','50'],['Joaco','50'],['Sofi','40']].map(([name,amount])=><View key={name} style={styles.person}><Text style={styles.personName}>{name}</Text><Text style={styles.personAmount}>{amount} USDC</Text></View>)}
+          <View style={styles.fundHeader}><View style={styles.icon}><Ionicons name={selected==='Viaje'?'airplane':selected==='Casa'?'home':selected==='Asado'?'restaurant':'briefcase'} size={20} color={colors.yellow}/></View><Text style={styles.fundName}>{selected==='Viaje'?'Viaje Bariloche':`Fondo ${selected}`}</Text><Text style={styles.tag}>{DEMO_MODE?'FONDO COMÚN':'EJEMPLO'}</Text></View>
+          {[['Tici','50'],[profile.displayName.trim()||'Vos','50'],['Sofi','40']].map(([name,amount],index)=><View key={index} style={styles.person}><Text style={styles.personName}>{name}</Text><Text style={styles.personAmount}>{amount} USDC</Text></View>)}
           <View style={styles.total}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmount}>140 USDC</Text></View>
-          <View style={styles.staking}><Ionicons name="leaf-outline" size={15} color={colors.success}/><Text style={styles.stakingText}>Puede participar en staking mientras esperan usarlo.</Text></View>
+          <View style={styles.staking}><Ionicons name="leaf-outline" size={15} color={colors.success}/><Text style={styles.stakingText}>{DEMO_MODE?'Staking activo':'Disponible próximamente'}</Text></View>
         </Animated.View>
       )}
-      {selected&&<Text style={styles.reaction}>Juntan la plata y el fondo puede seguir trabajando.</Text>}
+      {selected&&<Text style={styles.reaction}>{DEMO_MODE?'El fondo también puede trabajar mientras esperan usarlo.':'Ejemplo educativo. Los fondos compartidos todavía no están habilitados.'}</Text>}
     </>
   );
 }

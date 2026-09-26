@@ -1,3 +1,5 @@
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -12,7 +14,7 @@ type PaymentStage='idle'|'preparing'|'signing'|'submitting';
 
 export default function SendPayment(){
   const [account,setAccount]=useState<WalletAccount|null>(null);
-  const [destination,setDestination]=useState('');
+  const [destination,setDestination]=useState(DEMO_MODE?'Asado del viernes':'');
   const [amount,setAmount]=useState('10');
   const [assetCode,setAssetCode]=useState('XLM');
   const [stage,setStage]=useState<PaymentStage>('idle');
@@ -25,7 +27,7 @@ export default function SendPayment(){
         const balance=await walletService.getBalance(next.walletAddress);
         setAssetCode(balance.assetCode);
       }
-    }).catch(nextError=>setError(nextError instanceof Error?nextError.message:'No pudimos cargar la wallet.'));
+    }).catch(nextError=>setError(userMessage(nextError,'No pudimos completar el pago.')));
   },[]);
 
   const submit=async()=>{
@@ -48,13 +50,13 @@ export default function SendPayment(){
         },
       });
     }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos enviar el pago.');
+      setError(userMessage(nextError,'No pudimos completar el pago.'));
       setStage('idle');
     }
   };
 
   const busy=stage!=='idle';
-  const stageLabel=stage==='preparing'?'Preparando en Stellar…':stage==='signing'?'Esperando tu passkey…':stage==='submitting'?'Enviando a Testnet…':'';
+  const stageLabel=DEMO_MODE?(stage==='preparing'?'Preparando tu pago…':stage==='signing'?'Autorizando el pago…':'Enviando el pago…'):stage==='preparing'?'Preparando en Stellar…':stage==='signing'?'Esperando tu passkey…':stage==='submitting'?'Enviando a Testnet…':'';
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -68,7 +70,7 @@ export default function SendPayment(){
 
       <Animated.View entering={FadeInDown.duration(280)} style={styles.card}>
         <View style={styles.icon}><Ionicons name="paper-plane-outline" size={26} color={colors.yellow}/></View>
-        <Text style={styles.title}>Pago real en Testnet</Text>
+        <Text style={styles.title}>{DEMO_MODE?'Enviar pago':'Pago real en Testnet'}</Text>
         <Text style={styles.copy}>La passkey autoriza la operación. El bloqueo de la app no firma transacciones.</Text>
         <Text style={styles.label}>DESTINO STELLAR</Text>
         <TextInput autoCapitalize="characters" autoCorrect={false} editable={!busy} onChangeText={setDestination} placeholder="G… o C…" placeholderTextColor={colors.muted} style={styles.input} value={destination}/>
@@ -77,8 +79,8 @@ export default function SendPayment(){
           <TextInput editable={!busy} keyboardType="decimal-pad" onChangeText={setAmount} style={[styles.input,styles.amountInput]} value={amount}/>
           <Text style={styles.asset}>{assetCode}</Text>
         </View>
-        {account&&<Text numberOfLines={1} style={styles.from}>Desde {account.walletAddress.slice(0,10)}…{account.walletAddress.slice(-8)}</Text>}
-        <Text style={styles.mode}>{walletMode==='stellar'?'STELLAR TESTNET':'MODO MOCK · NO ENVÍA BLOCKCHAIN'}</Text>
+        {!DEMO_MODE&&account&&<Text numberOfLines={1} style={styles.from}>Desde {account.walletAddress.slice(0,10)}…{account.walletAddress.slice(-8)}</Text>}
+        <Text style={styles.mode}>{DEMO_MODE?'PATO PAY':walletMode==='stellar'?'STELLAR TESTNET':'MODO MOCK · NO ENVÍA BLOCKCHAIN'}</Text>
       </Animated.View>
 
       {busy&&<View style={styles.status}><ActivityIndicator color={colors.yellow}/><Text style={styles.statusText}>{stageLabel}</Text></View>}

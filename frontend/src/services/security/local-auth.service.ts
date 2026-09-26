@@ -1,11 +1,13 @@
+import {DEMO_MODE,DEMO_PREFIX,demoWait,DEMO_TIMINGS} from '@/demo/demo.config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 
-const APP_LOCK_KEY='patopay:security:app-lock-enabled:v1';
+const APP_LOCK_KEY=DEMO_MODE?DEMO_PREFIX+'app-lock':'patopay:security:app-lock-enabled:v1';
 
 export type AppAuthenticationMode='biometric'|'device';
 
 export async function isBiometricAvailable(){
+  if(DEMO_MODE)return true;
   const [hasHardware,isEnrolled,types]=await Promise.all([
     LocalAuthentication.hasHardwareAsync(),
     LocalAuthentication.isEnrolledAsync(),
@@ -15,15 +17,18 @@ export async function isBiometricAvailable(){
 }
 
 export function getSupportedAuthenticationTypes(){
+  if(DEMO_MODE)return Promise.resolve([LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION]);
   return LocalAuthentication.supportedAuthenticationTypesAsync();
 }
 
 export async function isDeviceSecurityAvailable(){
+  if(DEMO_MODE)return true;
   const level=await LocalAuthentication.getEnrolledLevelAsync();
   return level!==LocalAuthentication.SecurityLevel.NONE;
 }
 
 export function authenticate(mode:AppAuthenticationMode='device'){
+  if(DEMO_MODE)return demoWait(DEMO_TIMINGS.medium).then(()=>({success:true as const}));
   const biometricOnly=mode==='biometric';
   return LocalAuthentication.authenticateAsync({
     promptMessage:'Desbloqueá Pato Pay',

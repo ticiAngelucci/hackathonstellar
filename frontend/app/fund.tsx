@@ -1,3 +1,5 @@
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useCallback,useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -23,7 +25,7 @@ export default function Fund(){
       if(nextAccount)setBalance(await walletService.getBalance(nextAccount.walletAddress));
       setError(null);
     }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos consultar tu wallet.');
+      setError(userMessage(nextError,'No pudimos consultar tu wallet.'));
     }finally{
       setLoading(false);
     }
@@ -40,7 +42,7 @@ export default function Fund(){
       setTxHash(result.txHash??null);
       await refresh();
     }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'Friendbot no pudo fondear la wallet.');
+      setError(userMessage(nextError,'No pudimos consultar tu wallet.'));
     }finally{
       setFunding(false);
     }
@@ -61,13 +63,13 @@ export default function Fund(){
       </View>
 
       {loading?(
-        <View style={styles.loading}><ActivityIndicator color={colors.yellow}/><Text style={styles.muted}>Consultando Stellar Testnet…</Text></View>
+        <View style={styles.loading}><ActivityIndicator color={colors.yellow}/><Text style={styles.muted}>Consultando tu saldo…</Text></View>
       ):(
         <View style={styles.card}>
-          <Text style={styles.eyebrow}>{walletMode==='stellar'?'STELLAR TESTNET':'MODO MOCK'}</Text>
+          <Text style={styles.eyebrow}>{DEMO_MODE?'TU SALDO':walletMode==='stellar'?'STELLAR TESTNET':'MODO MOCK'}</Text>
           {account?(
             <>
-              <Text selectable numberOfLines={1} style={styles.address}>{account.walletAddress.slice(0,12)}…{account.walletAddress.slice(-10)}</Text>
+              <Text selectable numberOfLines={1} style={styles.address}>{DEMO_MODE?'Disponible en tu wallet':`${account.walletAddress.slice(0,12)}…${account.walletAddress.slice(-10)}`}</Text>
               <Text style={styles.balance}>{balance?.formatted??'0'} <Text style={styles.asset}>{balance?.assetCode??'XLM'}</Text></Text>
               {!balance?.funded&&<Text style={styles.empty}>Tu wallet está creada, pero todavía no tiene fondos.</Text>}
             </>
@@ -78,11 +80,12 @@ export default function Fund(){
       {walletMode==='stellar'&&<Text style={styles.devOnly}>Herramienta de desarrollo · Friendbot entrega fondos de prueba y nunca se usa en producción.</Text>}
       <PrimaryButton
         disabled={!account||funding||loading}
-        title={funding?'Fondeando en Testnet…':'Fondear en Testnet'}
+        title={DEMO_MODE?(funding?'Agregando saldo…':'Agregar saldo'):funding?'Fondeando en Testnet…':'Fondear en Testnet'}
         icon="flask-outline"
         onPress={()=>void fund()}
       />
-      {txHash&&<Text selectable style={styles.success}>Fondeo enviado · tx {txHash.slice(0,12)}…{txHash.slice(-8)}</Text>}
+      {DEMO_MODE&&txHash&&<Text style={styles.success}>Saldo agregado</Text>}
+      {!DEMO_MODE&&txHash&&<Text selectable style={styles.success}>Fondeo enviado · tx {txHash.slice(0,12)}…{txHash.slice(-8)}</Text>}
       {error&&<Text style={styles.error}>{error}</Text>}
     </Screen>
   );

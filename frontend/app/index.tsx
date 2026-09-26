@@ -1,3 +1,6 @@
+import {useAuth} from '@/features/auth/AuthProvider';
+import {profileService} from '@/services/users/profile.service';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect} from 'react';
 import {router} from 'expo-router';
 import {Pressable,StyleSheet,Text,View,useWindowDimensions} from 'react-native';
@@ -9,21 +12,29 @@ import {walletMode,walletService} from '@/services/wallet';
 import {colors,spacing,typography} from '@/constants/theme';
 
 export default function Onboarding(){
+  const {session,ready}=useAuth();
   const {width,height}=useWindowDimensions();
   const compact=height<700;
   const heroSize=Math.min(width-spacing.xxxl,compact?212:292);
 
   useEffect(()=>{
     let active=true;
+    if(!DEMO_MODE){
+      if(ready&&session)void profileService.getProfile().then(profile=>{if(active)router.replace(profile?.username?'/(tabs)':'/onboarding/name');}).catch(()=>{});
+      return ()=>{active=false;};
+    }
     hasCompletedOnboarding().then(async completed=>{
-      if(!active||!completed)return;
+      if(!active)return;
+      if(DEMO_MODE&&!completed){router.replace('/onboarding');return;}
+      if(!completed)return;
       const account=walletMode==='stellar'?await walletService.getAccount().catch(()=>null):null;
       if(active)router.replace(walletMode==='stellar'&&!account?'/onboarding/name':'/(tabs)');
     }).catch(()=>{});
     return ()=>{active=false;};
-  },[]);
+  },[session,ready]);
 
   const enterExistingAccount=async()=>{
+    if(!DEMO_MODE){router.push('/auth');return;}
     if(walletMode==='stellar'){
       const account=await walletService.getAccount().catch(()=>null);
       if(!account){

@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import {useEffect} from 'react';
 import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,Text,View} from 'react-native';
@@ -35,7 +36,7 @@ export function ServicesStep({enabled,onToggle}:{enabled:string[];onToggle:(id:s
           const active=enabled.includes(service.id);
           return (
             <Animated.View key={service.id} entering={FadeInDown.delay(70+index*70).duration(280)}>
-              <Pressable onPress={()=>onToggle(service.id)} style={({pressed})=>[styles.service,active&&styles.activeService,pressed&&styles.pressed]}>
+              <Pressable onPress={()=>{onToggle(service.id);void Haptics.selectionAsync().catch(()=>{});}} style={({pressed})=>[styles.service,active&&styles.activeService,pressed&&styles.pressed]}>
                 <View style={styles.icon}><Ionicons name={service.icon} size={19} color={active?colors.yellow:colors.muted}/></View>
                 <Text style={styles.name}>{service.name}</Text>
                 <ServiceToggle active={active}/>

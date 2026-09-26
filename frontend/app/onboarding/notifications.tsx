@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -26,7 +27,7 @@ export default function NotificationPermission(){
     setRequesting(true);
     setError(null);
     try{
-      const result=await Notifications.requestPermissionsAsync();
+      const result=DEMO_MODE?{status:'granted'}:await Notifications.requestPermissionsAsync();
       next(result.status==='granted');
     }catch(nextError){
       setError(nextError instanceof Error?nextError.message:'No pudimos pedir el permiso.');

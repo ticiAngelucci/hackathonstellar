@@ -12,5 +12,6 @@ export type OnboardingProfile={
   walletCreated:boolean;
   passkeyCreated:boolean;
   notificationsEnabled:boolean;
+  enabledServiceIds?:string[];
   policyPreset:PolicyPreset;
 };

@@ -1,14 +1,19 @@
-import {MockWalletService} from '@/services/wallet/mock-wallet.service';
-import {StellarWalletService} from '@/services/wallet/stellar-wallet.service';
+import {DEMO_MODE} from '@/demo/demo.config';
+import {DemoWalletService} from '@/services/demo/demo-wallet.service';
+import type {WalletService} from '@/services/wallet/wallet.service';
 
 const configuredMode=process.env.EXPO_PUBLIC_WALLET_MODE?.trim().toLowerCase();
 
-if(configuredMode&&configuredMode!=='mock'&&configuredMode!=='stellar'){
+if(!DEMO_MODE&&configuredMode&&configuredMode!=='mock'&&configuredMode!=='stellar'){
   throw new Error('EXPO_PUBLIC_WALLET_MODE debe ser mock o stellar.');
 }
 
-export const walletMode=configuredMode==='mock'?'mock':'stellar';
-export const walletService=walletMode==='mock'?new MockWalletService():new StellarWalletService();
+// Real application data always uses Stellar. Legacy mock remains available for isolated tests.
+export const walletMode=DEMO_MODE?'mock':'stellar';
+// Do not initialize Stellar, native crypto or passkey modules during a demo.
+export const walletService:WalletService=DEMO_MODE
+  ?new DemoWalletService()
+  :new (require('@/services/wallet/stellar-wallet.service').StellarWalletService)();
 
 export type {
   CreateWalletInput,

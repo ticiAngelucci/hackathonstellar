@@ -1,3 +1,5 @@
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useState} from 'react';
 import {router} from 'expo-router';
 import {ActivityIndicator,StyleSheet,Text,View,useWindowDimensions} from 'react-native';
@@ -23,23 +25,23 @@ export default function Wallet(){
     scale.value=withRepeat(withSequence(withTiming(1.04,{duration:450}),withTiming(.98,{duration:450})),-1,true);
     try{
       await walletService.prepareWallet();
-      router.push('/onboarding/passkey');
+      router.push({pathname:'/onboarding/passkey',params:DEMO_MODE?{create:'true'}:{}});
     }catch(nextError){
-      setError(nextError instanceof Error?nextError.message:'No pudimos preparar tu wallet.');
+      setError(userMessage(nextError,'No pudimos preparar tu wallet.'));
       setPreparing(false);
       scale.value=withTiming(1);
     }
   };
 
   return (
-    <OnboardingPage step={9} actions={<PrimaryButton disabled={preparing} title={preparing?'Comprobando Testnet…':'Crear wallet'} onPress={()=>void prepare()}/>}>
+    <OnboardingPage step={9} actions={<PrimaryButton disabled={preparing} title={preparing?'Preparando tu wallet...':'Crear wallet'} onPress={()=>void prepare()}/>}>
       <Animated.View style={pulse}><OnboardingPato variant="hero" size={height<700?145:190}/></Animated.View>
-      <OnboardingCopy title="Creemos tu wallet." body="Va a vivir en Stellar Testnet y sólo tu passkey podrá autorizar movimientos."/>
+      <OnboardingCopy title="Ahora vamos a crear tu wallet." body="Es tuya. Nosotros no podemos mover tu plata."/>
       <View style={styles.security}>
         <View style={styles.securityIcon}><Text style={styles.lock}>🔐</Text></View>
         <View style={styles.securityCopy}><Text style={styles.securityTitle}>Autocustodial</Text><Text style={styles.securityText}>Solo vos podés autorizar movimientos.</Text></View>
       </View>
-      {preparing&&<View style={styles.status}><ActivityIndicator color={colors.yellow}/><Text style={styles.statusText}>Comprobando Stellar y tu dispositivo…</Text></View>}
+      {preparing&&<View style={styles.status}><ActivityIndicator color={colors.yellow}/><Text style={styles.statusText}>Preparando tu wallet...</Text></View>}
       {error&&<Text style={styles.error}>{error}</Text>}
     </OnboardingPage>
   );

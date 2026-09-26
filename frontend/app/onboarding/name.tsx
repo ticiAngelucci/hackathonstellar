@@ -1,3 +1,4 @@
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {StyleSheet,Text,TextInput,useWindowDimensions} from 'react-native';
@@ -11,10 +12,10 @@ import {colors,radius,spacing,typography} from '@/constants/theme';
 export default function Name(){
   const {height}=useWindowDimensions();
   const {profile,hydrated,updateProfile}=useOnboarding();
-  const [name,setName]=useState(profile.displayName);
+  const [name,setName]=useState((profile.displayName||(DEMO_MODE?'Joaco':'')));
   const [error,setError]=useState<string|null>(null);
 
-  useEffect(()=>{if(hydrated)setName(profile.displayName);},[hydrated,profile.displayName]);
+  useEffect(()=>{if(hydrated)setName((profile.displayName||(DEMO_MODE?'Joaco':'')));},[hydrated,profile.displayName]);
 
   const continueFlow=()=>{
     const clean=name.trim();
@@ -28,7 +29,7 @@ export default function Name(){
       <OnboardingPato variant="avatar" size={height<700?112:145}/>
       <OnboardingCopy title="¿Cómo querés que te llame?" body="Así voy a saludarte dentro de Pato Pay."/>
       <TextInput
-        autoFocus
+        autoFocus={!DEMO_MODE}
         value={name}
         onChangeText={value=>{setName(value);setError(null);}}
         onSubmitEditing={continueFlow}

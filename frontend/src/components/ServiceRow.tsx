@@ -11,7 +11,7 @@ export function ServiceRow({service,onToggle,last=false,disabled=false}:{service
       </View>
       <View style={styles.copy}>
         <Text style={styles.name}>{service.name}</Text>
-        <Text style={styles.price}>{service.amount.toFixed(2)} USDC/mes</Text>
+        <Text style={styles.price}>{service.amount===undefined?'Preferencia de pago':`${service.amount.toFixed(2)} USDC/mes`}</Text>
       </View>
       <Switch
         accessibilityLabel={`${service.enabled?'Desactivar':'Activar'} ${service.name}`}

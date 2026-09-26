@@ -1,3 +1,10 @@
+import {subscriptionService} from '@/services/appDataService';
+import {profileService} from '@/services/users/profile.service';
+import {profileRepository} from '@/repositories/profile.repository';
+import {requireUserId} from '@/services/auth/auth.service';
+import {queryClient} from '@/lib/query-client';
+import {userMessage} from '@/lib/errors';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -10,7 +17,7 @@ import {OnboardingPato} from '@/features/onboarding/components/OnboardingPato';
 import {markOnboardingCompleted} from '@/features/onboarding/services/onboardingStorage';
 import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
 import {isAppLockEnabled} from '@/services/security/local-auth.service';
-import {walletMode} from '@/services/wallet';
+import {walletMode,walletService} from '@/services/wallet';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 const statuses=[
@@ -22,6 +29,7 @@ const statuses=[
 export default function Complete(){
   const {height}=useWindowDimensions();
   const {profile}=useOnboarding();
+  const [error,setError]=useState<string|null>(null);
   const [finishing,setFinishing]=useState(false);
   const [appLockEnabled,setAppLockState]=useState(false);
   const realWalletReady=profile.walletStatus==='active'&&profile.passkeyCreated;
@@ -31,19 +39,29 @@ export default function Complete(){
 
   const finish=async()=>{
     setFinishing(true);
-    await markOnboardingCompleted();
-    router.replace('/(tabs)');
+    try{
+      if(!DEMO_MODE){
+        await profileService.updateProfile({displayName:profile.displayName,username:profile.username,notificationsEnabled:profile.notificationsEnabled});
+        const account=await walletService.getAccount();
+        if(account)await profileRepository.saveWallet(await requireUserId(),account);
+        for(const serviceId of profile.enabledServiceIds??[])await subscriptionService.set(serviceId,true);
+        await queryClient.invalidateQueries({queryKey:['profile']});
+      }
+      await markOnboardingCompleted();
+      router.replace('/(tabs)');
+    }catch(nextError){setError(userMessage(nextError));}finally{setFinishing(false);}
   };
 
   return (
     <OnboardingPage step={14} actions={<PrimaryButton disabled={finishing||!ready} title={finishing?'Entrando…':'Entrar a Pato Pay'} onPress={()=>void finish()}/>}>
       <OnboardingPato variant="success" size={height<700?145:195}/>
       <OnboardingCopy title="Estamos listos." body="El acceso a la app y la autorización de tu wallet funcionan por separado."/>
+      {error&&<Text style={{color:colors.danger}}>{error}</Text>}
       <View style={styles.statuses}>
-        <Text style={styles.sectionLabel}>{walletMode==='mock'?'WALLET · MODO DEMO':'WALLET · STELLAR TESTNET'}</Text>
+        <Text style={styles.sectionLabel}>{DEMO_MODE?'TU CUENTA':walletMode==='mock'?'WALLET · MODO DEMO':'WALLET · STELLAR TESTNET'}</Text>
         {statuses.map((status,index)=>{
-          const active=status.field==='wallet'?profile.walletStatus==='active':status.field==='passkey'?profile.passkeyCreated:Boolean(profile.policyPreset);
-          const label=walletMode==='mock'&&status.field==='wallet'
+          const active=DEMO_MODE?true:status.field==='wallet'?profile.walletStatus==='active':status.field==='passkey'?profile.passkeyCreated:Boolean(profile.policyPreset);
+          const label=DEMO_MODE?status.label:walletMode==='mock'&&status.field==='wallet'
             ?'Wallet real pendiente'
             :walletMode==='mock'&&status.field==='passkey'
               ?'Passkey real pendiente'
@@ -55,7 +73,7 @@ export default function Complete(){
             </Animated.View>
           );
         })}
-        {profile.walletAddress&&<Text numberOfLines={1} style={styles.address}>{profile.walletAddress.slice(0,10)}…{profile.walletAddress.slice(-8)}</Text>}
+        {!DEMO_MODE&&profile.walletAddress&&<Text numberOfLines={1} style={styles.address}>{profile.walletAddress.slice(0,10)}…{profile.walletAddress.slice(-8)}</Text>}
         <Text style={styles.sectionLabel}>ACCESO A LA APP</Text>
         <View style={styles.status}>
           <View style={[styles.check,!appLockEnabled&&styles.optional]}><Ionicons name={appLockEnabled?'lock-closed':'remove'} size={14} color={appLockEnabled?colors.bg:colors.muted}/></View>

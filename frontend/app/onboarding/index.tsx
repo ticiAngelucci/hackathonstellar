@@ -1,3 +1,6 @@
+import {subscriptionService,policyService,defaultPaymentPolicy} from '@/services/appDataService';
+import {demoStakingService} from '@/services/demo/demo-staking.service';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useState} from 'react';
 import {useWindowDimensions} from 'react-native';
 import {PrimaryButton} from '@/components/PrimaryButton';
@@ -18,12 +21,14 @@ export default function EducationFlow(){
   const {step,direction,next,back}=useEducationFlow();
   const [stakingActive,setStakingActive]=useState(false);
   const [fundChoice,setFundChoice]=useState<FundChoice|null>(null);
-  const [enabledServices,setEnabledServices]=useState<string[]>([]);
+  const [enabledServices,setEnabledServices]=useState<string[]>(profile.enabledServiceIds??[]);
   const [paymentDecision,setPaymentDecision]=useState<PaymentDecision>(null);
   const compact=height<720;
 
   const toggleService=(id:string)=>{
-    setEnabledServices(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
+    if(DEMO_MODE)void subscriptionService.set(id,!enabledServices.includes(id));
+    const next=enabledServices.includes(id)?enabledServices.filter(item=>item!==id):[...enabledServices,id];
+    setEnabledServices(next);updateProfile({enabledServiceIds:next});
   };
 
   const patoVariant=step===1?'hero':step===3||step===6?(paymentDecision==='paid'?'success':'approval'):'agent';
@@ -32,10 +37,10 @@ export default function EducationFlow(){
   const content=()=>{
     switch(step){
       case 1:return <WelcomeStep/>;
-      case 2:return <BalanceStep active={stakingActive} onActivate={()=>setStakingActive(true)}/>;
+      case 2:return <BalanceStep active={stakingActive} onActivate={()=>{setStakingActive(true);if(DEMO_MODE)void demoStakingService.activate();}}/>;
       case 3:return <SharedFundStep selected={fundChoice} onSelect={setFundChoice}/>;
       case 4:return <ServicesStep enabled={enabledServices} onToggle={toggleService}/>;
-      case 5:return <PermissionsStep selected={profile.policyPreset} onSelect={policyPreset=>updateProfile({policyPreset})}/>;
+      case 5:return <PermissionsStep selected={profile.policyPreset} onSelect={policyPreset=>{updateProfile({policyPreset});if(DEMO_MODE)void policyService.save({...defaultPaymentPolicy,autoPayLimit:policyPreset==='safe'?0:5});}}/>;
       default:return <PaymentExampleStep decision={paymentDecision}/>;
     }
   };

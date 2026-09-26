@@ -1,45 +1,34 @@
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
+import {PrimaryButton} from '@/components/PrimaryButton';
+import {useGroup,useUpdateGroup} from '@/hooks/useGroups';
+import {userMessage} from '@/lib/errors';
+import {LoadingCards} from '@/components/LoadingCards';
+import {DEMO_MODE} from '@/demo/demo.config';
 import {useLocalSearchParams,router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
-import {Image,Pressable,StyleSheet,Text,View} from 'react-native';
+import {Alert,Image,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
 import {LinearGradient} from 'expo-linear-gradient';
 import {Screen} from '@/components/Screen';
 import {ActionButton} from '@/components/ActionButton';
 import {AnimatedCard} from '@/components/AnimatedCard';
 import {groupImages} from '@/constants/groupImages';
-import {eventService} from '@/services/eventService';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 const memberColors=['#FF9E68','#78C5E8','#F4C56A'];
 
 export default function GroupDetail(){
   const {id,name,members,imageKey}=useLocalSearchParams<{id:string;name?:string;members?:string;imageKey?:string}>();
-  const [remoteName,setRemoteName]=useState(name);
-  const [remoteMembers,setRemoteMembers]=useState<number|undefined>();
-  const [loadError,setLoadError]=useState<string|null>(null);
-  const parsedMembers=Number(members);
-
-  useEffect(()=>{
-    if(!id)return;
-    let active=true;
-    eventService.get(id)
-      .then(event=>{
-        if(!active)return;
-        setRemoteName(event.name);
-        setRemoteMembers(event.participants.length);
-        setLoadError(null);
-      })
-      .catch(error=>{
-        if(active)setLoadError(error instanceof Error?error.message:'No pudimos actualizar el grupo.');
-      });
-    return ()=>{active=false;};
-  },[id]);
-
+  const query=useGroup(id);
+  const event=query.data;
+  const update=useUpdateGroup();
+  const [editing,setEditing]=useState(false);const [nextName,setNextName]=useState('');
+  const canEdit=DEMO_MODE;
+  const loadError=query.error?userMessage(query.error,'No pudimos abrir el grupo.'):null;
   const group={
     id,
-    name:remoteName??'Grupo',
-    members:remoteMembers??(Number.isFinite(parsedMembers)?parsedMembers:1),
-    balance:0,
+    name:event?.name??name??'Grupo',
+    members:event?.participants.length??Number(members??0),
+    balance:event?.balance??0,
     stakingApy:0,
     imageKey,
   };
@@ -57,6 +46,7 @@ export default function GroupDetail(){
         </Pressable>
       </View>
 
+      {query.isLoading&&<LoadingCards/>}
       {loadError&&(
         <AnimatedCard style={styles.connectionError}>
           <Ionicons name="cloud-offline-outline" size={17} color={colors.danger}/>
@@ -83,44 +73,50 @@ export default function GroupDetail(){
 
       <View style={styles.identity}>
         <Text style={styles.title}>{group.name}</Text>
-        <Text style={styles.meta}>{group.members} personas</Text>
+        <Text style={styles.meta}>{event?.membersVisible===false?'Grupo compartido':`${group.members} personas`}</Text>
       </View>
 
       <View style={styles.actions}>
-        <ActionButton compact disabled icon="person-add" label="Invitar" onPress={()=>{}}/>
-        <ActionButton compact disabled icon="wallet-outline" label="Pagar" onPress={()=>{}}/>
-        <ActionButton compact icon="briefcase" label="Fondo" onPress={()=>router.push('/fund')}/>
-        <ActionButton compact disabled icon="settings" label="Ajustes" onPress={()=>{}}/>
+        <ActionButton compact disabled={!DEMO_MODE} icon="person-add" label="Invitar" onPress={()=>Alert.alert("Invitar al grupo","Código de invitación: PATO-ASADO")}/>
+        <ActionButton compact disabled={!DEMO_MODE} icon="wallet-outline" label="Pagar" onPress={()=>router.push('/payment/request')}/>
+        <ActionButton compact icon="briefcase" label="Fondo" onPress={()=>router.push({pathname:'/group-fund',params:{id}})}/>
+        <ActionButton compact disabled={!canEdit} icon="settings" label="Ajustes" onPress={()=>{setNextName(group.name);setEditing(true);}}/>
       </View>
 
-      <AnimatedCard style={styles.fund} onPress={()=>router.push('/fund')}>
+      {editing&&<View style={{gap:12,marginBottom:16}}>
+        <TextInput accessibilityLabel="Nombre del grupo" value={nextName} onChangeText={setNextName} maxLength={100} style={{color:colors.text,backgroundColor:colors.surface,padding:12}}/>
+        <PrimaryButton title={update.isPending?'Guardando…':'Guardar nombre'} disabled={update.isPending||!nextName.trim()} onPress={()=>update.mutate({id,name:nextName,version:event?.version??1},{onSuccess:()=>setEditing(false)})}/>
+        {update.error&&<Text style={{color:colors.danger}}>{userMessage(update.error)}</Text>}
+      </View>}
+      <AnimatedCard style={styles.fund} onPress={()=>router.push({pathname:'/group-fund',params:{id}})}>
         <View style={styles.fundTop}>
           <Text style={styles.label}>Fondo del grupo</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.muted}/>
         </View>
-        <Text style={styles.balance}>{group.balance.toFixed(2)} <Text style={styles.asset}>USDC</Text></Text>
+        <Text style={styles.balance}>{event?.balance===undefined?'Disponible próximamente':`${group.balance.toFixed(2)} USDC`}</Text>
         <View style={styles.apyRow}>
           <View style={styles.stakingInfo}>
             <Ionicons name="information-circle" size={15} color={colors.blueBright}/>
-            <Text style={styles.staking}>Con staking</Text>
+            <Text style={styles.staking}>{DEMO_MODE?'Con staking':'Rendimiento'}</Text>
           </View>
           <View style={styles.apyBadge}>
-            <Text style={styles.apy}>+{group.stakingApy}% APY</Text>
+            <Text style={styles.apy}>{DEMO_MODE?'Staking activo':'Disponible próximamente'}</Text>
           </View>
         </View>
       </AnimatedCard>
 
+      {!DEMO_MODE&&<Text style={styles.paymentSub}>Las invitaciones y los pagos de grupo estarán disponibles próximamente.</Text>}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Próximos pagos</Text>
         <Pressable style={({pressed})=>pressed&&styles.pressed}>
           <Text style={styles.sectionAction}>Ver todos <Ionicons name="chevron-forward" size={12}/></Text>
         </Pressable>
       </View>
-      <AnimatedCard delay={180} style={styles.emptyPayments}>
+      <AnimatedCard onPress={DEMO_MODE?()=>router.push('/payment/request'):undefined} delay={180} style={styles.emptyPayments}>
         <View style={styles.paymentIcon}><Ionicons name="checkmark-circle-outline" size={20} color={colors.success}/></View>
         <View style={styles.paymentCopy}>
-          <Text style={styles.paymentTitle}>No hay pagos pendientes</Text>
-          <Text style={styles.paymentSub}>Las solicitudes reales aparecerán acá.</Text>
+          <Text style={styles.paymentTitle}>{DEMO_MODE?'Solicitud de pago · 10 USDC':'No hay pagos pendientes'}</Text>
+          <Text style={styles.paymentSub}>{DEMO_MODE?'Te agregaron al asado. ¿Pagamos tu parte?':'Las solicitudes reales aparecerán acá.'}</Text>
         </View>
       </AnimatedCard>
     </Screen>
