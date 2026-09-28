@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from patopay.api.router import events_router, router
+from patopay.api.routes.assets import router as assets_router
 from patopay.api.routes.payment_requests import router as payment_requests_router
 from patopay.api.routes.policies import router as policies_router
 from patopay.api.routes.profiles import router as profiles_router
@@ -88,6 +89,7 @@ def create_app(
     )
     application.include_router(router)
     application.include_router(events_router, prefix=resolved_settings.api_prefix)
+    application.include_router(assets_router, prefix=resolved_settings.api_prefix)
     application.include_router(profiles_router, prefix=resolved_settings.api_prefix)
     application.include_router(wallets_router, prefix=resolved_settings.api_prefix)
     application.include_router(policies_router, prefix=resolved_settings.api_prefix)

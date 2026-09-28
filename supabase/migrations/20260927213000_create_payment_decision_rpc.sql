@@ -34,7 +34,7 @@ begin
   end if;
 
   v_request_hash := encode(
-    digest(
+    extensions.digest(
       concat_ws('|', p_request_id::text, p_action, p_expected_version::text),
       'sha256'
     ),

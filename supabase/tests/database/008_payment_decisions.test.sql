@@ -10,16 +10,6 @@ values
   ('81000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'decision-outsider@example.invalid')
 on conflict (id) do nothing;
 
-insert into patopay.assets (id, network, contract_address, code, decimals, enabled)
-values (
-  '82000000-0000-4000-8000-000000000001',
-  'testnet',
-  'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
-  'USDC',
-  7,
-  true
-);
-
 insert into patopay.wallets (id, user_id, provider, network, contract_address, status)
 values
   ('83000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000002', 'mock', 'mock', 'decision-source', 'active'),
@@ -36,7 +26,7 @@ values
     '81000000-0000-4000-8000-000000000002',
     '83000000-0000-4000-8000-000000000001',
     '83000000-0000-4000-8000-000000000002',
-    '82000000-0000-4000-8000-000000000001',
+    (select id from patopay.assets where network = 'testnet' and contract_address = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'),
     1000000,
     'pending_approval',
     1
@@ -47,7 +37,7 @@ values
     '81000000-0000-4000-8000-000000000002',
     '83000000-0000-4000-8000-000000000001',
     '83000000-0000-4000-8000-000000000002',
-    '82000000-0000-4000-8000-000000000001',
+    (select id from patopay.assets where network = 'testnet' and contract_address = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'),
     2000000,
     'pending_approval',
     1
