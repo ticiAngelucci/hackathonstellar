@@ -1,7 +1,8 @@
 import {paymentRepository} from '@/repositories/payment.repository';
 import {requireUserId} from '@/services/auth/auth.service';
 import {AppError} from '@/lib/errors';
-import {configuredAssetId,decimalToMinorUnits,formatMinorUnits,requireAssetId} from '@/services/api/money';
+import {requireUsdcAsset} from '@/services/assets/asset.service';
+import {decimalToMinorUnits,formatMinorUnits,configuredAssetId} from '@/services/api/money';
 import type {ApiPaymentRequest} from '@/services/api/types';
 import type {PaymentRequest,CreatePaymentRequest} from '@/types/domain';
 export function mapRequest(row:ApiPaymentRequest):PaymentRequest{
@@ -17,7 +18,8 @@ export const realPaymentService={
   const amount=decimalToMinorUnits(input.amount);
   if(BigInt(amount)<=0n)throw new AppError('El monto debe ser mayor que cero.');
   if(!input.idempotencyKey||input.idempotencyKey.length>128)throw new AppError('No pudimos identificar esta solicitud.');
-  return paymentRepository.create({payer_profile_id:input.payerId,asset_id:requireAssetId(),amount_minor:amount,memo:input.concept.trim()||null},input.idempotencyKey);
+  const asset=await requireUsdcAsset();
+  return paymentRepository.create({payer_profile_id:input.payerId,asset_id:asset.id,amount_minor:amount,memo:input.concept.trim()||null},input.idempotencyKey);
  },
  async approvePaymentRequest(_id:string):Promise<never>{throw new AppError('La aprobación de solicitudes todavía no está habilitada. No se movió tu saldo.','unsupported');},
  async rejectPaymentRequest(_id:string):Promise<never>{throw new AppError('El rechazo de solicitudes todavía no está habilitado.','unsupported');},
