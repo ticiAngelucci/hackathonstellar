@@ -13,11 +13,13 @@ const supabaseUrl=Deno.env.get('SUPABASE_URL')??'';
 const supabaseKey=Deno.env.get('SUPABASE_ANON_KEY')??Deno.env.get('SUPABASE_PUBLISHABLE_KEY')??'';
 const supabase=supabaseUrl&&supabaseKey?createClient(supabaseUrl,supabaseKey,{auth:{persistSession:false,autoRefreshToken:false}}):null;
 
-const server=new PasskeyServer({
-  networkPassphrase:Networks.TESTNET,
-  rpcUrl,
-  relayer:{baseUrl:relayerBaseUrl,apiKey:relayerApiKey,timeout:120_000},
-});
+function createPasskeyServer(){
+  return new PasskeyServer({
+    networkPassphrase:Networks.TESTNET,
+    rpcUrl,
+    relayer:{baseUrl:relayerBaseUrl,apiKey:relayerApiKey},
+  });
+}
 
 function corsHeaders(request:Request){
   const origin=request.headers.get('origin');
@@ -65,6 +67,7 @@ Deno.serve(async request=>{
   if(!relayerBaseUrl||!relayerApiKey){
     return json(request,{success:false,error:{message:'El relayer Testnet no está configurado en Supabase.'}},503);
   }
+  const server=createPasskeyServer();
 
   try{
     const body=await request.json() as {xdr?:unknown;network?:unknown;purpose?:unknown};
