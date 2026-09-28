@@ -9,6 +9,7 @@ import {getTransactionStatus as getStellarTransactionStatus,submitSignedTransact
 import {AsyncStoragePasskeyAdapter} from '@/services/wallet/passkey-storage';
 import {getPasskeyClient,isNativePasskeySupported} from '@/services/wallet/passkey.client';
 import {getWalletMetadata,saveWalletMetadata} from '@/services/wallet/wallet-metadata';
+import {createPasskeyKitStellarSigner} from '@/services/x402/x402-passkey-signer';
 import type {
   CreateWalletInput,
   PreparedPayment,
@@ -60,6 +61,36 @@ function paymentId(){
   return `stellar-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 }
 
+function isActivePasskeyAccount(account:WalletAccount|null):account is WalletAccount{
+  return Boolean(
+    account
+    &&account.network==='testnet'
+    &&account.status==='active'
+    &&account.signer==='passkey'
+    &&StrKey.isValidContract(account.walletAddress),
+  );
+}
+
+async function requireConnectedPasskeyKit(){
+  const account=await getWalletMetadata();
+  if(!isActivePasskeyAccount(account)){
+    throw new Error('No hay una passkey Stellar activa para autorizar el pago.');
+  }
+  const kit=await getPasskeyKit();
+  if(kit.contractId!==account.walletAddress){
+    const connected=await kit.connectWallet({keyId:account.credentialId});
+    if(connected.contractId!==account.walletAddress){
+      throw new Error('La passkey seleccionada no controla esta wallet.');
+    }
+  }
+  return {kit,account};
+}
+
+export async function getConnectedPasskeySigner(){
+  const {kit,account}=await requireConnectedPasskeyKit();
+  return createPasskeyKitStellarSigner(account.walletAddress,kit);
+}
+
 export class StellarWalletService implements WalletService{
   readonly mode='stellar' as const;
   private readonly pendingPayments=new Map<string,AssembledTransaction<null>>();
@@ -109,14 +140,7 @@ export class StellarWalletService implements WalletService{
 
   async getAccount(){
     const account=await getWalletMetadata();
-    if(
-      !account
-      ||account.network!=='testnet'
-      ||account.status!=='active'
-      ||account.signer!=='passkey'
-      ||!StrKey.isValidContract(account.walletAddress)
-    )return null;
-    return account;
+    return isActivePasskeyAccount(account)?account:null;
   }
 
   private async requireAccount(walletAddress?:string){
@@ -126,17 +150,8 @@ export class StellarWalletService implements WalletService{
     return {saved,address};
   }
 
-  private async requireConnectedKit(){
-    const account=await this.getAccount();
-    if(!account||account.signer!=='passkey')throw new Error('No hay una passkey Stellar activa para autorizar el pago.');
-    const kit=await getPasskeyKit();
-    if(kit.contractId!==account.walletAddress){
-      const connected=await kit.connectWallet({keyId:account.credentialId});
-      if(connected.contractId!==account.walletAddress){
-        throw new Error('La passkey seleccionada no controla esta wallet.');
-      }
-    }
-    return {kit,account};
+  private requireConnectedKit(){
+    return requireConnectedPasskeyKit();
   }
 
   async getBalance(walletAddress?:string){

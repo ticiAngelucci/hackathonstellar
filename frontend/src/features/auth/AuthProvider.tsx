@@ -26,17 +26,17 @@ export function AuthProvider({children}:PropsWithChildren){
  return <Context.Provider value={{session,ready}}>{children}</Context.Provider>;
 }
 export function AuthBoundary({children}:PropsWithChildren){
- const {session,ready}=useAuth();const segments=useSegments();
+ const {session,ready}=useAuth();const segments=useSegments() as readonly string[];
  if(DEMO_MODE)return children;
  if(!ready)return null;
- const root=segments[0];
+ const root=segments.at(0);
  if(!session&&root&&root!=='auth'&&root!=='onboarding'&&root!=='demo')return <Redirect href="/auth"/>;
  return <Fragment key={session?.user.id??'signed-out'}>{children}</Fragment>;
 }
 
 export function NavigationGuard(){
- const {session,ready}=useAuth();const segments=useSegments();const navigation=useRootNavigationState();const router=useRouter();
- const root=segments[0];const step=segments[1];
+ const {session,ready}=useAuth();const segments=useSegments() as readonly string[];const navigation=useRootNavigationState();const router=useRouter();
+ const root=segments.at(0);const step=segments.at(1);
  const protectedRoute=Boolean(root&&root!=='auth'&&root!=='demo'&&(root!=='onboarding'||['wallet','passkey','policy','notifications','app-lock','complete'].includes(step??'')));
  useEffect(()=>{if(!DEMO_MODE&&navigation?.key&&ready&&!session&&protectedRoute)router.replace('/auth');},[navigation?.key,ready,session,protectedRoute,router]);
  return null;
