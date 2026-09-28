@@ -22,6 +22,7 @@ async def test_api_exposes_event_contract_and_frontend_cors() -> None:
     assert preflight.status_code == 200
     assert preflight.headers["access-control-allow-origin"] == "http://localhost:8081"
     assert sorted(openapi.json()["paths"]) == [
+        "/api/v1/assets",
         "/api/v1/events",
         "/api/v1/me",
         "/api/v1/me/payment-policy",
@@ -32,6 +33,8 @@ async def test_api_exposes_event_contract_and_frontend_cors() -> None:
         "/api/v1/me/wallets/{wallet_id}/balance",
         "/api/v1/payment-requests",
         "/api/v1/payment-requests/{request_id}",
+        "/api/v1/payment-requests/{request_id}/approve",
+        "/api/v1/payment-requests/{request_id}/reject",
         "/api/v1/profiles",
         "/health",
         "/ready",
