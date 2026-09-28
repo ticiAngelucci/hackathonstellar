@@ -35,6 +35,7 @@ async def test_api_exposes_event_contract_and_frontend_cors() -> None:
         "/api/v1/payment-requests/{request_id}",
         "/api/v1/payment-requests/{request_id}/approve",
         "/api/v1/payment-requests/{request_id}/reject",
+        "/api/v1/payment-requests/{request_id}/settle",
         "/api/v1/profiles",
         "/health",
         "/ready",

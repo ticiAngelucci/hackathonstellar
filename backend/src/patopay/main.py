@@ -11,10 +11,12 @@ from patopay.api.routes.payment_requests import router as payment_requests_route
 from patopay.api.routes.policies import router as policies_router
 from patopay.api.routes.profiles import router as profiles_router
 from patopay.api.routes.service_subscriptions import router as subscriptions_router
+from patopay.api.routes.settlements import router as settlements_router
 from patopay.api.routes.wallets import router as wallets_router
 from patopay.application.ports import EventService
 from patopay.application.ports.auth import AuthVerifier
 from patopay.application.ports.supabase import SupabaseGateway
+from patopay.application.ports.x402 import X402Facilitator
 from patopay.application.use_cases.events import SupabaseEventService
 from patopay.config import Settings
 from patopay.infrastructure.auth.supabase_jwt import SupabaseJwtVerifier
@@ -31,6 +33,10 @@ class DisposableAuthVerifier(AuthVerifier, Protocol):
     async def dispose(self) -> None: ...
 
 
+class DisposableFacilitator(X402Facilitator, Protocol):
+    async def aclose(self) -> None: ...
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     try:
@@ -42,6 +48,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         verifier = getattr(application.state, "auth_verifier", None)
         if verifier is not None and hasattr(verifier, "dispose"):
             await cast(DisposableAuthVerifier, verifier).dispose()
+        facilitator = getattr(application.state, "x402_facilitator", None)
+        if facilitator is not None and hasattr(facilitator, "aclose"):
+            await cast(DisposableFacilitator, facilitator).aclose()
 
 
 def create_app(
@@ -50,6 +59,7 @@ def create_app(
     supabase_gateway: SupabaseGateway | None = None,
     auth_verifier: object | None = None,
     payment_executor: object | None = None,
+    x402_facilitator: X402Facilitator | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
     if resolved_settings.payment_executor == "stellar" and payment_executor is None:
@@ -72,10 +82,12 @@ def create_app(
     resolved_auth_verifier = auth_verifier
     if resolved_auth_verifier is None and resolved_settings.supabase_publishable_key:
         resolved_auth_verifier = SupabaseJwtVerifier(resolved_settings)
+    application.state.settings = resolved_settings
     application.state.supabase = resolved_supabase
     application.state.supabase_gateway = resolved_supabase
     application.state.auth_verifier = resolved_auth_verifier
     application.state.payment_executor = resolved_payment_executor
+    application.state.x402_facilitator = x402_facilitator
     resolved_event_service = event_service
     if resolved_event_service is None and isinstance(resolved_supabase, SupabaseClient):
         resolved_event_service = SupabaseEventService(SupabaseTableGateway(resolved_supabase))
@@ -95,6 +107,7 @@ def create_app(
     application.include_router(policies_router, prefix=resolved_settings.api_prefix)
     application.include_router(subscriptions_router, prefix=resolved_settings.api_prefix)
     application.include_router(payment_requests_router, prefix=resolved_settings.api_prefix)
+    application.include_router(settlements_router, prefix=resolved_settings.api_prefix)
     return application
 
 

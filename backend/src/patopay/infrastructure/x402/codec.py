@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 from collections.abc import Mapping
 from typing import Any
@@ -20,6 +21,15 @@ def encode_payment_header(payload: Mapping[str, Any]) -> str:
     if len(raw) > _MAX_DECODED_BYTES:
         raise ValueError("payment payload exceeds 100 KiB")
     return base64.b64encode(raw).decode("ascii")
+
+
+def payment_payload_hash(payload: Mapping[str, Any]) -> str:
+    if not isinstance(payload, Mapping):
+        raise ValueError("payment payload must be a JSON object")
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    return hashlib.sha256(raw).hexdigest()
 
 
 def decode_payment_header(value: str) -> dict[str, Any]:
