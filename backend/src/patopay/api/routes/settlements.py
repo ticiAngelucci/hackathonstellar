@@ -12,6 +12,7 @@ from patopay.api.schemas.x402 import X402PaymentRequired
 from patopay.api.supabase_dependencies import get_supabase_table_gateway
 from patopay.application.ports.auth import AuthenticatedActor
 from patopay.application.ports.x402 import X402Facilitator
+from patopay.application.use_cases.reconciliation import PaymentReconciliationService
 from patopay.application.use_cases.settlements import SettlementPreparationService
 from patopay.infrastructure.supabase.client import SupabaseApiError
 from patopay.infrastructure.supabase.gateway import SupabaseTableGateway
@@ -297,3 +298,37 @@ async def settle_payment_request(
         content=response,
         headers={"PAYMENT-REQUIRED": _requirements_header(prepared["payment_requirements"])},
     )
+
+
+@router.post("/payment-attempts/{attempt_id}/refresh")
+async def refresh_payment_attempt(
+    attempt_id: UUID,
+    request: Request,
+    actor: ActorDependency,
+    token: TokenDependency,
+    idempotency_key: IdempotencyHeader,
+    gateway: GatewayDependency,
+) -> JSONResponse:
+    if idempotency_key is None:
+        raise HTTPException(status_code=422, detail="Idempotency-Key is required")
+    reader = request.app.state.stellar_rpc
+    if reader is None:
+        raise HTTPException(status_code=503, detail="Stellar reconciliation is not configured")
+    try:
+        result = await PaymentReconciliationService(gateway, reader).reconcile(
+            attempt_id=attempt_id,
+            actor_id=actor.subject,
+            access_token=token,
+        )
+    except SupabaseApiError as error:
+        raise HTTPException(
+            status_code=_preparation_status(error), detail="Reconciliation state update failed"
+        ) from error
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    status_code = 200 if result["status"] in {"confirmed", "failed"} else 202
+    return JSONResponse(status_code=status_code, content=result)

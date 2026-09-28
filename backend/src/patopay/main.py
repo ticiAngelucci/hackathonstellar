@@ -15,6 +15,7 @@ from patopay.api.routes.settlements import router as settlements_router
 from patopay.api.routes.wallets import router as wallets_router
 from patopay.application.ports import EventService
 from patopay.application.ports.auth import AuthVerifier
+from patopay.application.ports.stellar import StellarTransactionReader
 from patopay.application.ports.supabase import SupabaseGateway
 from patopay.application.ports.x402 import X402Facilitator
 from patopay.application.use_cases.events import SupabaseEventService
@@ -37,6 +38,10 @@ class DisposableFacilitator(X402Facilitator, Protocol):
     async def aclose(self) -> None: ...
 
 
+class DisposableStellarReader(StellarTransactionReader, Protocol):
+    async def aclose(self) -> None: ...
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     try:
@@ -51,6 +56,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         facilitator = getattr(application.state, "x402_facilitator", None)
         if facilitator is not None and hasattr(facilitator, "aclose"):
             await cast(DisposableFacilitator, facilitator).aclose()
+        stellar_rpc = getattr(application.state, "stellar_rpc", None)
+        if stellar_rpc is not None and hasattr(stellar_rpc, "aclose"):
+            await cast(DisposableStellarReader, stellar_rpc).aclose()
 
 
 def create_app(
@@ -60,6 +68,7 @@ def create_app(
     auth_verifier: object | None = None,
     payment_executor: object | None = None,
     x402_facilitator: X402Facilitator | None = None,
+    stellar_rpc: StellarTransactionReader | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
     if resolved_settings.payment_executor == "stellar" and payment_executor is None:
@@ -88,6 +97,7 @@ def create_app(
     application.state.auth_verifier = resolved_auth_verifier
     application.state.payment_executor = resolved_payment_executor
     application.state.x402_facilitator = x402_facilitator
+    application.state.stellar_rpc = stellar_rpc
     resolved_event_service = event_service
     if resolved_event_service is None and isinstance(resolved_supabase, SupabaseClient):
         resolved_event_service = SupabaseEventService(SupabaseTableGateway(resolved_supabase))
