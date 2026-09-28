@@ -34,9 +34,9 @@ function load(file){file=path.resolve(root,file);if(!file.endsWith('.ts'))file+=
  assert.equal(payments.mapRequest(request).status,'approved');assert.equal(payments.mapRequest(request).txHash,undefined);assert.equal(payments.mapRequest({...request,asset_id:'unknown'}).amount,'—');
  const input={payerId:'user-b',amount:'14.5',concept:'Asado',idempotencyKey:'stable-key'};
  responses=[new Error('connection lost')];await assert.rejects(payments.realPaymentService.createPaymentRequest(input));
- responses=[{status:201,body:{id:'r1',status:'pending_approval'}}];await payments.realPaymentService.createPaymentRequest(input);
- const last=calls.at(-1),prior=calls.at(-2);assert.equal(last.init.headers.get('Idempotency-Key'),prior.init.headers.get('Idempotency-Key'));assert.equal(last.body.amount_minor,'145000000');assert.deepEqual(Object.keys(last.body).sort(),['amount_minor','asset_id','memo','payer_profile_id']);
- await assert.rejects(payments.realPaymentService.approvePaymentRequest('r1'),e=>e.code==='unsupported');
+ responses=[{body:[{id:asset,network:'testnet',contract_address:'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',code:'USDC',decimals:7,enabled:true}]},{status:201,body:{id:'r1',status:'pending_approval'}}];await payments.realPaymentService.createPaymentRequest(input);
+ const last=calls.at(-1);assert.equal(last.init.headers.get('Idempotency-Key'),'stable-key');assert.equal(last.body.amount_minor,'145000000');assert.deepEqual(Object.keys(last.body).sort(),['amount_minor','asset_id','memo','payer_profile_id']);
+ responses=[{body:{...request,version:1}},{body:{id:'r1',status:'approved',version:2,next_action:'prepare_sign_and_execute'}}];await payments.realPaymentService.approvePaymentRequest('r1');assert.equal(calls.at(-1).url.endsWith('/payment-requests/r1/approve'),true);assert.equal(calls.at(-1).body.expected_version,1);
  const policy=load('src/services/policies/policy.service').realPolicyService;
  responses=[{status:404}];assert.equal((await policy.get()).version,0);
  const apiPolicy={id:'p1',version:3,auto_pay_limit_minor:'1',approval_limit_minor:'100000000',daily_limit_minor:'100000001',recipient_mode:'allowlist',allowed_recipient_ids:['user-b'],allowed_asset_ids:[asset]};

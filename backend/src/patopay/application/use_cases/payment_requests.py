@@ -40,7 +40,9 @@ class PaymentRequestService:
         status_filter: str | None = None,
     ) -> list[dict[str, Any]]:
         filters = {
-            "select": "id,requester_id,payer_id,asset_id,amount_minor,memo,status,created_at",
+            "select": (
+                "id,requester_id,payer_id,asset_id,amount_minor,memo,status,version,created_at"
+            ),
             "order": "created_at.desc,id.desc",
         }
         if status_filter is not None:
@@ -56,7 +58,9 @@ class PaymentRequestService:
             "payment_requests",
             access_token=access_token,
             filters={
-                "select": "id,requester_id,payer_id,asset_id,amount_minor,memo,status,created_at",
+                "select": (
+                    "id,requester_id,payer_id,asset_id,amount_minor,memo,status,version,created_at"
+                ),
                 "id": f"eq.{request_id}",
                 "limit": "1",
             },
