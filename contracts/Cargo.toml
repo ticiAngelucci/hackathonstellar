@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["patopay-policy"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["PatoPay"]
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+soroban-sdk = "=27.0.0"
+smart-wallet-interface = { git = "https://github.com/stellar/passkey-kit.git", rev = "4e24eb1005d893dab1cf3dab08ba49f2c3df7069", package = "smart-wallet-interface" }
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true

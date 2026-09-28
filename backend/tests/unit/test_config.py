@@ -36,6 +36,9 @@ def test_mock_payment_settings_work_without_stellar_infrastructure() -> None:
     assert settings.stellar_asset_contract_id is None
     assert settings.stellar_asset_code == "USDC"
     assert settings.stellar_asset_scale == 7
+    assert settings.x402_enabled is False
+    assert settings.x402_facilitator_url is None
+    assert settings.x402_timeout_seconds == 20.0
     assert settings.supabase_timeout_seconds == 10.0
 
 

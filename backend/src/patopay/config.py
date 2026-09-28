@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     )
     stellar_asset_code: str = "USDC"
     stellar_asset_scale: int = Field(default=7, ge=0, le=18)
+    x402_enabled: bool = False
+    x402_facilitator_url: HttpUrl | None = None
+    x402_timeout_seconds: float = Field(default=20.0, gt=0, le=60)
+    x402_max_timeout_seconds: int = Field(default=60, ge=15, le=300)
 
     @model_validator(mode="after")
     def validate_payment_configuration(self) -> "Settings":
@@ -50,6 +54,8 @@ class Settings(BaseSettings):
                 self.stellar_rpc_url,
                 self.stellar_relayer_url,
                 self.stellar_asset_contract_id,
+                self.x402_enabled,
+                self.x402_facilitator_url,
             )
         ):
             raise ValueError("Stellar payment configuration is incomplete")

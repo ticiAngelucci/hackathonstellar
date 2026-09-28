@@ -18,10 +18,12 @@ export interface GroupRepository{
 
 export type PaymentRecord=Omit<PaymentRequestRow,'amount_minor'>&{amount_minor:string;asset?:AssetRow};
 export type PaymentCreated={id:string;status:PaymentRequestRow['status'];amount_minor:string;asset_id:string;policy_outcome:string;reason_code:string;next_action:string|null};
+export type PaymentDecision={id:string;status:PaymentRequestRow['status'];version:number;next_action:string|null};
 export interface PaymentRepository{
   list():Promise<PaymentRecord[]>;
   get(id:string):Promise<PaymentRecord>;
   create(input:{payer_profile_id:string;amount_minor:string;asset_id:string;memo:string|null},key:string):Promise<PaymentCreated>;
+  decide(id:string,action:'approve'|'reject',expectedVersion:number,key:string):Promise<PaymentDecision>;
   defaultAsset():Promise<AssetRow>;
 }
 

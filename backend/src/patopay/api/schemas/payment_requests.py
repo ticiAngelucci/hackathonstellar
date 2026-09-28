@@ -43,3 +43,4 @@ class PaymentRequestSummary(ApiModel):
     amount_minor: str
     memo: str | None
     status: str
+    version: int | None = None

@@ -39,7 +39,7 @@ begin
   end if;
 
   v_request_hash := encode(
-    digest(
+    extensions.digest(
       concat_ws('|', p_payer_profile_id::text, p_amount_minor::text, p_asset_id::text, coalesce(p_memo, '')),
       'sha256'
     ),

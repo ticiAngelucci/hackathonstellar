@@ -31,6 +31,8 @@ def test_create_app_does_not_fallback_when_stellar_executor_is_missing() -> None
         stellar_rpc_url="https://soroban-testnet.stellar.org",
         stellar_relayer_url="https://relay.test",
         stellar_asset_contract_id=CONTRACT_ID,
+        x402_enabled=True,
+        x402_facilitator_url="https://facilitator.test",
     )
 
     with pytest.raises(RuntimeError, match="Stellar payment executor is not configured"):

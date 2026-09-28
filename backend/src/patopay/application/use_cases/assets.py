@@ -6,9 +6,22 @@ class AssetRegistryError(ValueError):
 
 
 class AssetRegistry:
-    def __init__(self, gateway: Any, *, contract_id: str | None) -> None:
+    def __init__(self, gateway: Any, *, contract_id: str | None = None) -> None:
         self._gateway = gateway
         self._contract_id = contract_id
+
+    async def list_enabled(self, *, access_token: str) -> list[dict[str, Any]]:
+        rows = await self._gateway.select(
+            "assets",
+            access_token=access_token,
+            filters={
+                "select": "id,network,contract_address,code,decimals,enabled",
+                "network": "eq.testnet",
+                "code": "eq.USDC",
+                "enabled": "eq.true",
+            },
+        )
+        return cast(list[dict[str, Any]], rows)
 
     async def usdc(self, *, access_token: str) -> dict[str, Any]:
         if not self._contract_id:

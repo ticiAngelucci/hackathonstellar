@@ -1,7 +1,7 @@
 import {appDatabase} from '@/lib/supabase';
 import {AppError,checkResult} from '@/lib/errors';
 import {minorUnitsToRpcNumber} from '@/lib/money';
-import type {PaymentCreated,PaymentRecord,PaymentRepository} from '@/repositories/contracts';
+import type {PaymentCreated,PaymentDecision,PaymentRecord,PaymentRepository} from '@/repositories/contracts';
 
 async function hydrate(rows:Omit<PaymentRecord,'asset'>[]){
   if(!rows.length)return [];
@@ -29,6 +29,11 @@ export const supabasePaymentRepository:PaymentRepository={
     checkResult(error,'No pudimos crear la solicitud. Reintentá.');
     const created=data as unknown as PaymentCreated;
     return {...created,amount_minor:String(created.amount_minor)};
+  },
+  async decide(id,action,expectedVersion,key){
+    const {data,error}=await appDatabase().rpc('decide_payment_request',{p_request_id:id,p_action:action,p_expected_version:expectedVersion,p_idempotency_key:key});
+    checkResult(error,'No pudimos actualizar la solicitud.');
+    return data as unknown as PaymentDecision;
   },
   async defaultAsset(){
     const {data,error}=await appDatabase().from('assets').select('*').eq('enabled',true).eq('code','USDC').order('created_at',{ascending:true}).limit(1).maybeSingle();

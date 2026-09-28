@@ -4,6 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from patopay.api.dependencies import get_access_token, get_current_actor
+from patopay.api.schemas.payment_decisions import (
+    PaymentDecisionRequest,
+    PaymentDecisionResponse,
+)
 from patopay.api.schemas.payment_requests import (
     PaymentRequestCreate,
     PaymentRequestResponse,
@@ -11,6 +15,10 @@ from patopay.api.schemas.payment_requests import (
 )
 from patopay.api.supabase_dependencies import get_supabase_table_gateway
 from patopay.application.ports.auth import AuthenticatedActor
+from patopay.application.use_cases.payment_decisions import (
+    DecisionAction,
+    PaymentDecisionService,
+)
 from patopay.application.use_cases.payment_requests import PaymentRequestService
 from patopay.infrastructure.supabase.client import SupabaseApiError
 from patopay.infrastructure.supabase.gateway import SupabaseTableGateway
@@ -25,6 +33,90 @@ StatusQuery = Annotated[str | None, Query()]
 
 def _service(gateway: SupabaseTableGateway) -> PaymentRequestService:
     return PaymentRequestService(gateway)
+
+
+def _decision_service(gateway: SupabaseTableGateway) -> PaymentDecisionService:
+    return PaymentDecisionService(gateway)
+
+
+def _decision_http_status(error: SupabaseApiError) -> int:
+    if error.status_code in {401, 403}:
+        return 403
+    if error.status_code in {400, 409}:
+        return 409
+    return 502
+
+
+async def _decide_payment_request(
+    *,
+    request_id: UUID,
+    action: DecisionAction,
+    expected_version: int,
+    idempotency_key: str | None,
+    access_token: str,
+    gateway: SupabaseTableGateway,
+) -> dict[str, object]:
+    if idempotency_key is None:
+        raise HTTPException(status_code=422, detail="Idempotency-Key is required")
+    try:
+        return await _decision_service(gateway).decide(
+            request_id=request_id,
+            action=action,
+            expected_version=expected_version,
+            idempotency_key=idempotency_key,
+            access_token=access_token,
+        )
+    except SupabaseApiError as error:
+        raise HTTPException(
+            status_code=_decision_http_status(error),
+            detail="Payment decision failed",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.post(
+    "/payment-requests/{request_id}/approve",
+    response_model=PaymentDecisionResponse,
+)
+async def approve_payment_request(
+    request_id: UUID,
+    payload: PaymentDecisionRequest,
+    actor: ActorDependency,
+    token: TokenDependency,
+    idempotency_key: IdempotencyHeader,
+    gateway: GatewayDependency,
+) -> dict[str, object]:
+    return await _decide_payment_request(
+        request_id=request_id,
+        action="approve",
+        expected_version=payload.expected_version,
+        idempotency_key=idempotency_key,
+        access_token=token,
+        gateway=gateway,
+    )
+
+
+@router.post(
+    "/payment-requests/{request_id}/reject",
+    response_model=PaymentDecisionResponse,
+)
+async def reject_payment_request(
+    request_id: UUID,
+    payload: PaymentDecisionRequest,
+    actor: ActorDependency,
+    token: TokenDependency,
+    idempotency_key: IdempotencyHeader,
+    gateway: GatewayDependency,
+) -> dict[str, object]:
+    return await _decide_payment_request(
+        request_id=request_id,
+        action="reject",
+        expected_version=payload.expected_version,
+        idempotency_key=idempotency_key,
+        access_token=token,
+        gateway=gateway,
+    )
 
 
 @router.post(

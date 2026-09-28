@@ -28,7 +28,7 @@ export async function submitSignedTransaction(xdr:string):Promise<RelayerSubmiss
   const response=await fetch(stellarNetwork.relayerUrl,{
     method:'POST',
     headers:{Accept:'application/json','Content-Type':'application/json',...authHeaders},
-    body:JSON.stringify({xdr,network:stellarNetwork.network}),
+    body:JSON.stringify({xdr,network:stellarNetwork.network,purpose:'wallet_creation'}),
   });
   const payload=await response.json().catch(()=>null) as RelayerPayload|null;
   const failure=typeof payload?.error==='string'?payload.error:payload?.error?.message;
