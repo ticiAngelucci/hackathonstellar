@@ -11,6 +11,7 @@ import {usePaymentRequests,usePaymentRequest} from '@/hooks/usePaymentRequests';
 import {useAuth} from '@/features/auth/AuthProvider';
 import {userMessage} from '@/lib/errors';
 import {realPaymentService} from '@/services/payments/payment.service';
+import {settlePaymentRequest} from '@/services/x402/x402-payment.service';
 import {colors,spacing,typography} from '@/constants/theme';
 import type {PaymentRequestStatus} from '@/types/domain';
 export const requestLabels:Record<PaymentRequestStatus,string>={pending:'Pendiente de aprobación',approved:'Aprobada · todavía no pagada',processing:'Procesando',paid:'Pago registrado',rejected:'Rechazada',blocked:'Bloqueada por las reglas',failed:'El pago no se completó',expired:'Vencida',cancelled:'Cancelada'};
@@ -19,6 +20,7 @@ export function RealPaymentRequests(){
  const query=id?detail:list;const requests=id?(detail.data?[detail.data]:[]):list.data??[];
  const [decisionBusy,setDecisionBusy]=useState(false);const [decisionError,setDecisionError]=useState<string|null>(null);
  const decide=async(action:'approve'|'reject')=>{if(!id||decisionBusy)return;setDecisionBusy(true);setDecisionError(null);try{if(action==='approve')await realPaymentService.approvePaymentRequest(id);else await realPaymentService.rejectPaymentRequest(id);await query.refetch();}catch(error){setDecisionError(userMessage(error,'No pudimos actualizar la solicitud.'));}finally{setDecisionBusy(false);}};
+ const settle=async()=>{if(!id||decisionBusy||!detail.data?.version)return;setDecisionBusy(true);setDecisionError(null);try{await settlePaymentRequest(id,detail.data.version);await query.refetch();}catch(error){setDecisionError(userMessage(error,'No pudimos iniciar la liquidación.'));}finally{setDecisionBusy(false);}};
  return <Screen><AppHeader title="Solicitudes de pago"/>
  {!id&&<CreatePaymentRequest/>}
  {query.isLoading&&<LoadingCards/>}
@@ -33,6 +35,10 @@ export function RealPaymentRequests(){
   {decisionError&&<Text style={{color:colors.danger}}>{decisionError}</Text>}
   <PrimaryButton disabled={decisionBusy} title={decisionBusy?'Actualizando…':'Aprobar solicitud'} onPress={()=>void decide('approve')}/>
   <PrimaryButton disabled={decisionBusy} variant="secondary" title="Rechazar" onPress={()=>void decide('reject')}/>
+ </>}
+ {id&&request.status==='approved'&&request.payerId===session?.user.id&&<>
+  {decisionError&&<Text style={{color:colors.danger}}>{decisionError}</Text>}
+  <PrimaryButton disabled={decisionBusy} title={decisionBusy?'Autorizando…':'Autorizar y liquidar'} onPress={()=>void settle()}/>
  </>}
  {id&&request.status==='paid'&&request.txHash&&<PrimaryButton title="Ver comprobante" onPress={()=>router.push({pathname:'/payment/success',params:{txHash:request.txHash,amount:request.amount,asset:request.asset}})}/>}
  </AnimatedCard>)}</View>
