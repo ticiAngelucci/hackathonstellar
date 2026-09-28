@@ -9,8 +9,8 @@ import Animated,{FadeInDown} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {GroupCard} from '@/components/GroupCard';
 import {PrimaryButton} from '@/components/PrimaryButton';
-import {PatoPayEvent} from '@/services/eventService';
-import {Group} from '@/types';
+import type {PatoPayEvent} from '@/types/domain';
+import type {Group} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 const imageKeys=['asado','bariloche','casa','gym'] as const;

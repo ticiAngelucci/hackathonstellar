@@ -11,7 +11,7 @@ import {Screen} from '@/components/Screen';
 import {AppHeader} from '@/components/AppHeader';
 import {PatoAgent} from '@/components/PatoAgent';
 import {PrimaryButton} from '@/components/PrimaryButton';
-import {defaultPaymentPolicy} from '@/services/appDataService';
+import {defaultPaymentPolicy} from '@/services/policies/policy.service';
 import {colors,radius,spacing,typography} from '@/constants/theme';
 
 function StepButton({icon,onPress,disabled=false}:{icon:'add'|'remove';onPress:()=>void;disabled?:boolean}){

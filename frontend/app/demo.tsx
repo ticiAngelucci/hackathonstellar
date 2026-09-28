@@ -9,13 +9,16 @@ import {resetDemoState,mutateDemo} from '@/demo/demo.controller';
 import {demoAccount} from '@/demo/demo.data';
 import {demoPaymentService} from '@/services/demo/demo-payment.service';
 import {markOnboardingCompleted} from '@/features/onboarding/services/onboardingStorage';
+import {userMessage} from '@/lib/errors';
 import {colors,spacing} from '@/constants/theme';
 export default function DemoControl(){
  const [busy,setBusy]=useState(false);
+ const [error,setError]=useState<string|null>(null);
  if(!DEMO_MODE&&!__DEV__)return <Redirect href="/"/>;
- const run=async(action:()=>Promise<void>)=>{if(busy)return;setBusy(true);try{await action();}finally{setBusy(false);}};
+ const run=async(action:()=>Promise<void>)=>{if(busy)return;setBusy(true);setError(null);try{await action();}catch(nextError){setError(userMessage(nextError,'No pudimos completar la acción demo.'));}finally{setBusy(false);}};
  const reset=()=>run(async()=>{await resetDemoState();router.dismissAll();router.replace('/onboarding');});
  return <Screen><AppHeader title="Opciones"/><Text style={{color:colors.muted,marginBottom:spacing.lg}}>{DEMO_MODE?'Elegí cómo continuar.':'Activá EXPO_PUBLIC_DEMO_MODE=true y reiniciá Expo para usar estos controles.'}</Text>
+ {error&&<Text style={{color:colors.danger,marginBottom:spacing.md}}>{error}</Text>}
  <View style={{gap:spacing.sm}}>
  <PrimaryButton disabled={!DEMO_MODE||busy} title="Empezar de nuevo" onPress={()=>void reset()}/>
  <PrimaryButton disabled={!DEMO_MODE||busy} title="Volver a la bienvenida" onPress={()=>void run(async()=>{await resetDemoState();router.dismissAll();router.replace('/onboarding');})}/>

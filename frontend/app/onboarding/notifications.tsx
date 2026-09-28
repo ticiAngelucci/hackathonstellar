@@ -3,7 +3,6 @@ import {useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import {StyleSheet,Text,View,useWindowDimensions} from 'react-native';
-import * as Notifications from 'expo-notifications';
 import {PrimaryButton} from '@/components/PrimaryButton';
 import {SecondaryButton} from '@/components/SecondaryButton';
 import {OnboardingCopy} from '@/features/onboarding/components/OnboardingCopy';
@@ -27,7 +26,7 @@ export default function NotificationPermission(){
     setRequesting(true);
     setError(null);
     try{
-      const result=DEMO_MODE?{status:'granted'}:await Notifications.requestPermissionsAsync();
+      const result=DEMO_MODE?{status:'granted'}:await (await import('expo-notifications')).requestPermissionsAsync();
       next(result.status==='granted');
     }catch(nextError){
       setError(nextError instanceof Error?nextError.message:'No pudimos pedir el permiso.');

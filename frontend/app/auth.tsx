@@ -13,7 +13,7 @@ export default function Auth(){
  const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
  const submit=async()=>{if(busy)return;setBusy(true);setMessage('');try{
   const result=creating?await authService.signUp(email,password):await authService.signIn(email,password);
-  if(!result.session){setMessage('Revisá tu email para confirmar la cuenta. Después iniciá sesión.');setCreating(false);return;}
+  if(!result.session){setMessage('Revisá tu email para confirmar la cuenta. Al abrir el enlace volverás a Pato Pay.');setCreating(false);return;}
   const profile=await profileService.getProfile();
   router.replace(profile?.username?'/(tabs)':'/onboarding/name');
  }catch(error){setMessage(userMessage(error));}finally{setBusy(false);}};

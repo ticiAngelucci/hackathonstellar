@@ -13,8 +13,11 @@ function environment(demo=true){
   file=path.resolve(root,file);if(!file.endsWith('.ts'))file+='.ts';if(cache.has(file))return cache.get(file).exports;
   const module={exports:{}};cache.set(file,module);
   const requireLocal=id=>{
-   if(!demo&&id==='react-native-url-polyfill/auto')return {};
-   if(!demo&&id==='@supabase/supabase-js')return {createClient(){throw Error('Real client unexpectedly initialized in isolated tests');}};
+   if(id==='react-native-url-polyfill/auto')return {};
+   if(id==='react-native')return {Platform:{OS:'web'}};
+   if(id==='expo-constants')return {__esModule:true,default:{executionEnvironment:'bare'},ExecutionEnvironment:{StoreClient:'storeClient'}};
+   if(id==='expo-linking')return {createURL:path=>`https://example.test${path}`};
+   if(id==='@supabase/supabase-js')return {createClient(){throw Error('Real client unexpectedly initialized in isolated tests');},processLock:()=>{}};
    if(id==='@react-native-async-storage/async-storage')return adapter;
    if(id==='expo-local-authentication')return {AuthenticationType:{FACIAL_RECOGNITION:2}};
    if(id.startsWith('@/'))return load(path.join('src',id.slice(2)));
@@ -30,15 +33,27 @@ function environment(demo=true){
 (async()=>{
  const env=environment();const {load,storage,delays}=env;
  const selected=load('src/services/wallet/index');assert.equal(selected.walletMode,'mock');
- const app=load('src/services/appDataService');assert.equal(await app.walletService.getBalance(),52.3);
- assert.equal((await app.transactionService.list()).length,3);
- assert.equal((await load('src/services/eventService').eventService.list()).length,2);
+ assert.equal((await selected.walletService.getBalance()).amount,52.3);
+ assert.equal((await load('src/services/transactions/transaction.service').transactionService.list()).length,3);
+ assert.equal((await load('src/services/groups/group.service').groupService.list()).length,2);
  const controller=load('src/demo/demo.controller');
  const payments=load('src/services/demo/demo-payment.service').demoPaymentService;
  const wallet=new (load('src/services/demo/demo-wallet.service').DemoWalletService)();
  assert.equal(await wallet.getAccount(),null);
  await wallet.createWithPasskey({displayName:'Joaco',username:'joaco'});
  assert.equal((await wallet.getBalance()).amount,52.3);assert.equal(delays[0],1100);
+ const catalog=load('src/constants/serviceCatalog').serviceCatalog;
+ assert.equal(catalog.map(service=>service.id).join(','),'spotify,netflix,chatgpt,drive');
+ const subscriptions=load('src/services/services/automatic-services.service').subscriptionService;
+ for(const service of catalog)assert.equal(await subscriptions.set(service.id,true),true);
+ const enabledServices=await subscriptions.list();
+ for(const service of catalog)assert.equal(enabledServices.get(service.id),true);
+ await assert.rejects(()=>subscriptions.set('electricity',true),/No encontramos ese servicio/);
+ const policies=load('src/services/policies/policy.service').policyService;
+ const currentPolicy=await policies.get();
+ const savedPolicy=await policies.save({...currentPolicy,autoPayLimit:0,minorLimits:{...currentPolicy.minorLimits,auto:'0'}});
+ assert.equal(savedPolicy.autoPayLimit,0);
+ await policies.save({...savedPolicy,autoPayLimit:5,minorLimits:{...savedPolicy.minorLimits,auto:'50000000'}});
  const request=await payments.create(10);
  assert.equal(await payments.pay(request.id,false),null,'approval must be explicit');
  const [first,duplicate]=await Promise.all([payments.pay(request.id,true),payments.pay(request.id,true)]);
@@ -58,11 +73,15 @@ function environment(demo=true){
  assert.equal(storage.get('patopay:onboarding:profile:v1'),'REAL PROFILE');assert.equal(storage.get('patopay:security:app-lock-enabled:v1'),'true');
  assert.ok(delays.every(ms=>ms<=1500));
  const pending=await payments.create(10);const running=payments.pay(pending.id,true);await controller.resetDemoState();await running;assert.equal((await wallet.getBalance()).amount,52.3);
+ const stale=environment();stale.storage.set('patopay:demo:v1:state',JSON.stringify({balance:7}));
+ const normalized=await stale.load('src/demo/demo.controller').readDemoState();
+ assert.equal(normalized.balance,7);assert.ok(Array.isArray(normalized.groups));assert.ok(Array.isArray(normalized.transactions));assert.equal(Object.keys(normalized.subscriptions).length,0);
+ const corrupt=environment();corrupt.storage.set('patopay:demo:v1:state','{broken-json');
+ assert.equal((await corrupt.load('src/demo/demo.controller').readDemoState()).balance,52.3);
  const real=environment(false);
- await assert.rejects(real.load('src/services/appDataService').walletService.getBalance(),/conexión/);
+ assert.throws(()=>real.load('src/config/env').validateEnvironment(),/conexión remota/);
  await real.load('src/features/onboarding/services/onboardingStorage').markOnboardingCompleted('user-a');assert.equal(real.storage.get('patopay:onboarding:v2:user-a:completed'),'true');
  assert.equal(await real.load('src/features/onboarding/services/onboardingStorage').hasCompletedOnboarding('user-b'),false);
  assert.throws(()=>real.load('src/demo/demo.controller').resetDemoState(),/disabled/);
- console.log('PASS: approval, automatic, blocked, rejection, duplicate payment, balances, fixed timing, simulated auth, isolated storage, reset and reset during payment.');
+ console.log('PASS: services, policy, state migration, approval, automatic, blocked, rejection, duplicate payment, balances, fixed timing, simulated auth, isolated storage, reset and reset during payment.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
-

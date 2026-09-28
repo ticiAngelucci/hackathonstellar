@@ -5,7 +5,6 @@ import {Redirect,useSegments,useRootNavigationState,useRouter} from 'expo-router
 import type {Session} from '@supabase/supabase-js';
 import {DEMO_MODE} from '@/demo/demo.config';
 import {authService} from '@/services/auth/auth.service';
-import {getSupabase} from '@/lib/supabase';
 import {queryClient} from '@/lib/query-client';
 const Context=createContext<{session:Session|null;ready:boolean}>({session:null,ready:false});
 export const useAuth=()=>useContext(Context);
@@ -20,7 +19,7 @@ export function AuthProvider({children}:PropsWithChildren){
    subscription=authService.onAuthStateChange((_event,next)=>{if(!active)return;if(currentUser.current!==next?.user.id){queryClient.clear();currentUser.current=next?.user.id;}setSession(next);setReady(true);});
    void authService.getSession().then(next=>{if(active){setSession(next);setReady(true);}}).catch(()=>{if(active)setReady(true);});
   }catch{setReady(true);}
-  const appState=Platform.OS==='web'?null:AppState.addEventListener('change',state=>{try{if(state==='active')getSupabase().auth.startAutoRefresh();else getSupabase().auth.stopAutoRefresh();}catch{}});
+  const appState=Platform.OS==='web'?null:AppState.addEventListener('change',state=>{try{if(state==='active')authService.startAutoRefresh();else authService.stopAutoRefresh();}catch{}});
   return ()=>{active=false;subscription?.unsubscribe();appState?.remove();};
  },[]);
  return <Context.Provider value={{session,ready}}>{children}</Context.Provider>;

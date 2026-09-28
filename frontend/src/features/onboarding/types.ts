@@ -5,7 +5,7 @@ export type OnboardingProfile={
   displayName:string;
   username:string;
   walletAddress?:string;
-  walletNetwork?:'testnet';
+  walletNetwork?:'mock'|'testnet';
   walletStatus?:'active'|'mock';
   walletCredentialId?:string;
   walletCreationTxHash?:string;

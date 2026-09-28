@@ -7,7 +7,7 @@ import {ActivityIndicator,Linking,Pressable,StyleSheet,Text,View} from 'react-na
 import Animated,{useAnimatedStyle,useSharedValue,withDelay,withSpring,withTiming} from 'react-native-reanimated';
 import {Screen} from '@/components/Screen';
 import {PrimaryButton} from '@/components/PrimaryButton';
-import {transactionService} from '@/services/appDataService';
+import {transactionService} from '@/services/transactions/transaction.service';
 import {walletService} from '@/services/wallet';
 import type {Transaction} from '@/types';
 import {colors,radius,spacing,typography} from '@/constants/theme';
@@ -15,12 +15,13 @@ import {colors,radius,spacing,typography} from '@/constants/theme';
 const wait=(duration:number)=>new Promise(resolve=>setTimeout(resolve,duration));
 
 export default function Success(){
-  const {id,txHash,amount,asset,recipient}=useLocalSearchParams<{
+  const {id,txHash,amount,asset,recipient,recipientName}=useLocalSearchParams<{
     id?:string;
     txHash?:string;
     amount?:string;
     asset?:string;
     recipient?:string;
+    recipientName?:string;
   }>();
   const blockchainFlow=Boolean(txHash);
   const [showDemoExplorer,setShowDemoExplorer]=useState(false);
@@ -107,7 +108,7 @@ export default function Success(){
   const shownAmount=blockchainFlow?amount??'0':Math.abs(transaction?.amount??0).toFixed(2);
   const shownAsset=blockchainFlow?asset??'XLM':transaction?.assetCode??'USDC';
   const shownRecipient=blockchainFlow
-    ?recipient?`${recipient.slice(0,9)}…${recipient.slice(-7)}`:'Stellar Testnet'
+    ?recipientName??(recipient?`${recipient.slice(0,9)}…${recipient.slice(-7)}`:'Stellar Testnet')
     :transaction?.title==='Asado del viernes'?'del asado del viernes':transaction?.title??'Pago';
 
   return (

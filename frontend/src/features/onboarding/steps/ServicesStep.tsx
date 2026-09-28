@@ -4,14 +4,8 @@ import {Ionicons} from '@expo/vector-icons';
 import {Pressable,StyleSheet,Text,View} from 'react-native';
 import Animated,{FadeInDown,ZoomIn,useAnimatedStyle,useSharedValue,withSpring} from 'react-native-reanimated';
 import {PatoSpeech} from '@/features/onboarding/components/PatoSpeech';
+import {serviceCatalog} from '@/constants/serviceCatalog';
 import {colors,radius,spacing,typography} from '@/constants/theme';
-
-const services=[
-  {id:'spotify',name:'Spotify',icon:'musical-notes' as const},
-  {id:'netflix',name:'Netflix',icon:'play-circle' as const},
-  {id:'internet',name:'Internet',icon:'wifi' as const},
-  {id:'chatgpt',name:'ChatGPT',icon:'sparkles' as const},
-];
 
 function ServiceToggle({active}:{active:boolean}){
   const position=useSharedValue(active?18:0);
@@ -32,12 +26,12 @@ export function ServicesStep({enabled,onToggle}:{enabled:string[];onToggle:(id:s
     <>
       <PatoSpeech>También puedo ocuparme de las cosas aburridas.</PatoSpeech>
       <View style={styles.list}>
-        {services.map((service,index)=>{
+        {serviceCatalog.map((service,index)=>{
           const active=enabled.includes(service.id);
           return (
             <Animated.View key={service.id} entering={FadeInDown.delay(70+index*70).duration(280)}>
               <Pressable onPress={()=>{onToggle(service.id);void Haptics.selectionAsync().catch(()=>{});}} style={({pressed})=>[styles.service,active&&styles.activeService,pressed&&styles.pressed]}>
-                <View style={styles.icon}><Ionicons name={service.icon} size={19} color={active?colors.yellow:colors.muted}/></View>
+                <View style={styles.icon}><Ionicons name={service.icon as keyof typeof Ionicons.glyphMap} size={19} color={active?colors.yellow:colors.muted}/></View>
                 <Text style={styles.name}>{service.name}</Text>
                 <ServiceToggle active={active}/>
               </Pressable>

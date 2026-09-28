@@ -6,7 +6,7 @@ import {PrimaryButton} from './PrimaryButton';
 import {LoadingCards} from './LoadingCards';
 import {usePolicy,useSavePolicy} from '@/hooks/usePolicy';
 import {profileService} from '@/services/users/profile.service';
-import {decimalToMinorUnits,formatMinorUnits} from '@/services/api/money';
+import {decimalToMinorUnits,formatMinorUnits} from '@/lib/money';
 import {userMessage} from '@/lib/errors';
 import {colors,spacing,radius} from '@/constants/theme';
 export function RealPermissions(){

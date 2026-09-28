@@ -22,7 +22,7 @@ export class MockWalletService implements WalletService{
       walletAddress:address,
       address,
       credentialId:`mock-passkey-${randomToken(20)}`,
-      network:'testnet',
+      network:'mock',
       status:'mock',
       signer:'mock',
     };
@@ -47,7 +47,7 @@ export class MockWalletService implements WalletService{
     const address=walletAddress??account?.walletAddress;
     if(!address)throw new Error('Todavía no hay una wallet configurada.');
     await wait(700);
-    return {address,network:'testnet' as const,txHash:`mock-${randomToken(32)}`};
+    return {address,network:'mock' as const,txHash:`mock-${randomToken(32)}`};
   }
 
   async preparePayment(input:{destination:string;amount:string}):Promise<PreparedPayment>{
@@ -60,7 +60,7 @@ export class MockWalletService implements WalletService{
       destination:input.destination,
       amount:input.amount,
       assetCode:'USDC',
-      network:'testnet',
+      network:'mock',
     };
   }
 

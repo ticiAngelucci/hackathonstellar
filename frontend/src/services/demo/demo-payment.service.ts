@@ -1,6 +1,6 @@
 import {readDemoState,mutateDemo,demoGeneration} from '@/demo/demo.controller';
 import {demoWait} from '@/demo/demo.config';
-import {paymentDecision} from './demo-policy.service';
+import {paymentDecision} from '@/repositories/demo/policy.repository';
 export const PAYMENT_STEPS=[{text:'Pato está revisando tus reglas...',ms:500},{text:'Este pago necesita tu aprobación.',ms:500},{text:'Preparando transacción...',ms:700},{text:'Enviando el pago...',ms:900}];
 export const demoPaymentService={
  create(amount:number){if(!Number.isFinite(amount)||amount<=0)throw new Error('Ingresá un monto válido.');return mutateDemo(s=>{const request={id:'demo-request-'+(++s.sequence),amount,title:amount===3?'Spotify':'Asado del viernes',status:'pending' as const};s.requests.push(request);return request;});},
@@ -20,5 +20,3 @@ export const demoPaymentService={
   });
  }
 };
-export const demoTransactionService={async list(limit?:number){const ts=(await readDemoState()).transactions;return limit?ts.slice(0,limit):ts;},async get(id:string){const tx=(await readDemoState()).transactions.find(t=>t.id===id);if(!tx)throw new Error('Transacción no disponible.');return tx;}};
-export const demoSubscriptionService={async list(){return new Map(Object.entries((await readDemoState()).subscriptions));},set(id:string,enabled:boolean){return mutateDemo(s=>s.subscriptions[id]=enabled);}};

@@ -1,5 +1,5 @@
 export type WalletMode='mock'|'stellar';
-export type WalletNetwork='testnet';
+export type WalletNetwork='mock'|'testnet';
 export type WalletStatus='active'|'mock';
 
 export type CreateWalletInput={

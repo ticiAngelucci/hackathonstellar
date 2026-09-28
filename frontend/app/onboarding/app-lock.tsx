@@ -79,8 +79,13 @@ export default function AppLock(){
   };
 
   const skip=async()=>{
-    await setAppLockEnabled(false);
-    router.push(DEMO_MODE?'/onboarding/wallet':'/onboarding/complete');
+    setError(null);
+    try{
+      await setAppLockEnabled(false);
+      router.push(DEMO_MODE?'/onboarding/wallet':'/onboarding/complete');
+    }catch{
+      setError('No pudimos guardar tu preferencia. Probá nuevamente.');
+    }
   };
 
   return (

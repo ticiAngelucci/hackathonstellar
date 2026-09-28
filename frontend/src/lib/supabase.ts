@@ -1,19 +1,18 @@
-import {assertPublicKey} from './public-key';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {createClient,processLock,type SupabaseClient} from '@supabase/supabase-js';
-import {DEMO_MODE} from '@/demo/demo.config';
+import {createClient,type SupabaseClient} from '@supabase/supabase-js';
+import {env,validateEnvironment} from '@/config/env';
+import type {Database} from '@/types/database.generated';
+import {assertPublicKey} from './public-key';
 import {AppError} from './errors';
-let client:SupabaseClient|undefined;
-export function supabasePublicKey(){return process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim()||process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()||'';}
+let client:SupabaseClient<Database>|undefined;
+export function supabasePublicKey(){return env.supabaseAnonKey;}
 export function getSupabase(){
-  if(DEMO_MODE)throw new AppError('Esta conexión no está disponible.');
+  if(env.demoMode)throw new AppError('Esta conexión no está disponible en modo demo.','configuration');
   if(client)return client;
-  const url=process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-  const key=supabasePublicKey();
-  if(!url||!key)throw new AppError('Falta configurar la conexión de la aplicación.','configuration');
-  assertPublicKey(key);
-  client=createClient(url,key,{auth:{storage:AsyncStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,lock:processLock}});
+  const config=validateEnvironment();
+  assertPublicKey(config.supabaseAnonKey);
+  client=createClient<Database>(config.supabaseUrl,config.supabaseAnonKey,{auth:{storage:AsyncStorage,storageKey:'patopay:auth',persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,flowType:'pkce'}});
   return client;
 }
 export const appDatabase=()=>getSupabase().schema('patopay');

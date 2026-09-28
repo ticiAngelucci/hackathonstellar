@@ -48,7 +48,8 @@ Si se modifican las reglas en Permisos, los pagos posteriores respetan esos lím
 ## Arquitectura y verificación
 
 - `src/demo/`: configuración, tipos, datos iniciales, persistencia serializada y reset.
-- `src/services/demo/`: wallet compatible con WalletService, pagos, reglas, grupos y staking.
+- `src/services/demo/`: wallet compatible con WalletService, pagos y staking.
+- `src/repositories/demo/`: perfiles, grupos, reglas y servicios persistidos para demo.
 - Los selectores públicos de wallet, datos y grupos conservan sus interfaces.
 - El modo demo evita inicializar Stellar y passkeys; seguridad devuelve resultados locales.
 - Pagos idempotentes: un doble toque no debita dos veces. Reset invalida pagos en curso.
@@ -99,13 +100,11 @@ en el dispositivo que se va a usar.
 - `src/features/onboarding/steps/ServicesStep.tsx`
 - `src/features/onboarding/steps/SharedFundStep.tsx`
 - `src/features/onboarding/store/OnboardingProvider.tsx`
-- `src/services/appDataService.ts`
-- `src/services/demo/demo-group.service.ts`
 - `src/services/demo/demo-payment.service.ts`
-- `src/services/demo/demo-policy.service.ts`
 - `src/services/demo/demo-staking.service.ts`
 - `src/services/demo/demo-wallet.service.ts`
-- `src/services/eventService.ts`
+- `src/repositories/demo/group.repository.ts`
+- `src/repositories/demo/policy.repository.ts`
 - `src/services/security/local-auth.service.ts`
 - `src/services/wallet/index.ts`
 

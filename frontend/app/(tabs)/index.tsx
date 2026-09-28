@@ -4,7 +4,6 @@ import {LoadingCards} from '@/components/LoadingCards';
 import {userMessage} from '@/lib/errors';
 import {usePaymentRequests} from '@/hooks/usePaymentRequests';
 import {useProfile} from '@/hooks/useProfile';
-import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
 import {DEMO_MODE} from '@/demo/demo.config';
 import {useCallback} from 'react';
 import {router,useFocusEffect} from 'expo-router';
@@ -28,10 +27,9 @@ export default function Home(){
   const walletFunded=wallet.data?.balance?.funded;
   const transactions=(activity.data??[]).slice(0,3);const loading=activity.isLoading;
   const dataError=activity.error?userMessage(activity.error,'No pudimos cargar tu actividad.'):null;
-  const {profile}=useOnboarding();
-  const remoteProfile=useProfile();
+  const profile=useProfile();
   const requests=usePaymentRequests();
-  const displayName=(DEMO_MODE?profile.displayName:remoteProfile.data?.displayName??'').trim();
+  const displayName=(profile.data?.displayName??'').trim();
 
   const {refetch:refreshWallet}=wallet;const {refetch:refreshActivity}=activity;
   const refresh=useCallback(async()=>{await Promise.all([refreshWallet(),refreshActivity()]);},[refreshWallet,refreshActivity]);

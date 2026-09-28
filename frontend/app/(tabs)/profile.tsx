@@ -2,11 +2,10 @@ import {useEffect,useState} from 'react';
 import {DEMO_MODE} from '@/demo/demo.config';
 import {useProfile,useUpdateProfile} from '@/hooks/useProfile';
 import {authService} from '@/services/auth/auth.service';
-import {profileService} from '@/services/users/profile.service';
+import {walletMetadataService} from '@/services/wallet/wallet-metadata.service';
 import {PrimaryButton} from '@/components/PrimaryButton';
 import {userMessage} from '@/lib/errors';
 import type {PublicWallet} from '@/types/domain';
-import {useOnboarding} from '@/features/onboarding/store/OnboardingProvider';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import {StyleSheet,Switch,Text,TextInput,View} from 'react-native';
@@ -24,11 +23,10 @@ const items=[
 ] as const;
 
 export default function Profile(){
-  const {profile}=useOnboarding();
   const remote=useProfile();const update=useUpdateProfile();
   const [editing,setEditing]=useState(false);const [name,setName]=useState('');const [username,setUsername]=useState('');const [error,setError]=useState('');const [wallets,setWallets]=useState<PublicWallet[]>([]);
-  useEffect(()=>{if(!DEMO_MODE)void profileService.getWallets().then(setWallets).catch(()=>{});},[]);
-  const shown=DEMO_MODE?profile:remote.data;
+  useEffect(()=>{if(!DEMO_MODE)void walletMetadataService.list().then(rows=>setWallets(rows.map(wallet=>({id:wallet.id,address:wallet.contract_address,network:wallet.network,status:wallet.status})))).catch(()=>{});},[]);
+  const shown=remote.data;
   const save=async()=>{try{await update.mutateAsync({displayName:name,username,notificationsEnabled:remote.data?.notificationsEnabled??false});setEditing(false);setError('');}catch(e){setError(userMessage(e));}};
   const logout=async()=>{try{await authService.signOut();router.replace('/auth');}catch(e){setError(userMessage(e));}};
   return (

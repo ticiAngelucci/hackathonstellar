@@ -1,6 +1,13 @@
 import type {DemoState} from './demo.types';
 import type {WalletAccount} from '@/services/wallet/types';
 export const demoAccount:WalletAccount={walletAddress:'GDEMO7XJ2K...PATO',address:'GDEMO7XJ2K...PATO',credentialId:'DEMO-CREDENTIAL',network:'testnet',status:'mock',signer:'mock'};
+export const demoRecipientWallet={
+ id:'sofi-stellar-wallet',
+ name:'Wallet Stellar de Sofi',
+ owner:'Sofi',
+ network:'Stellar Testnet',
+ address:'GDVEU3DD4KOFECV66VIHWEZOYX4ZKR3WV27L464SIIPOU2IUI3JCZA57',
+} as const;
 export function initialDemoState():DemoState{return {
  balance:52.30,wallet:null,staking:false,sequence:0,spent:0,requests:[],subscriptions:{},
  policy:{autoPayLimit:5,approvalLimit:30,blockAbove:30,dailyLimit:50,allowedRecipientsOnly:true},

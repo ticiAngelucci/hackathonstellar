@@ -4,10 +4,8 @@ import {useQueryClient} from '@tanstack/react-query';
 import {router} from 'expo-router';
 import {PrimaryButton} from './PrimaryButton';
 import {profileService} from '@/services/users/profile.service';
-import {realPaymentService} from '@/services/payments/payment.service';
-import {requireAssetId} from '@/services/api/money';
-import {PatoPayApiError} from '@/services/api/patopayApi';
-import {userMessage} from '@/lib/errors';
+import {paymentService} from '@/services/payments/payment.service';
+import {AppError,userMessage} from '@/lib/errors';
 import {useAuth} from '@/features/auth/AuthProvider';
 import {colors,spacing,radius} from '@/constants/theme';
 export function CreatePaymentRequest(){
@@ -19,18 +17,17 @@ export function CreatePaymentRequest(){
  const submit=async()=>{
   if(busy)return;setBusy(true);setError('');
   try{
-   requireAssetId();
    const form=JSON.stringify([session?.user.id,username.trim().toLowerCase(),amount.trim(),concept.trim()]);
    if(pending.current?.form!==form)pending.current={form,key:`request-${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`};
    const action=pending.current;
    if(!action.payerId)action.payerId=(await profileService.findProfile(username)).id;
-   if(!action.createdId)action.createdId=(await realPaymentService.createPaymentRequest({payerId:action.payerId,amount,concept,idempotencyKey:action.key})).id;
+   if(!action.createdId)action.createdId=(await paymentService.createPaymentRequest({payerId:action.payerId,amount,concept,idempotencyKey:action.key})).id;
    void cache.invalidateQueries({queryKey:['paymentRequests',session?.user.id]});
    void cache.invalidateQueries({queryKey:['transactions',session?.user.id]});
    router.push({pathname:'/payment/request',params:{id:action.createdId}});
   }catch(cause){
    // A deterministic validation rejection did not create a request. Network/409 retries retain the key.
-   if(cause instanceof PatoPayApiError&&[404,422].includes(cause.status))pending.current=null;
+   if(cause instanceof AppError&&['not_found','22023'].includes(cause.code))pending.current=null;
    setError(userMessage(cause));
   }finally{setBusy(false);}
  };

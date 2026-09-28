@@ -31,7 +31,7 @@ export function AppLockGate({children}:PropsWithChildren){
     const subscription=AppState.addEventListener('change',nextState=>{
       const leavingApp=nextState==='inactive'||nextState==='background';
       if(leavingApp&&!authenticatingRef.current){
-        void isAppLockEnabled().then(enabled=>{if(enabled)setLocked(true);});
+        void isAppLockEnabled().then(enabled=>{if(enabled)setLocked(true);}).catch(()=>{});
       }
     });
 

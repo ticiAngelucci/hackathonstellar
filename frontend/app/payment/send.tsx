@@ -1,5 +1,6 @@
 import {userMessage} from '@/lib/errors';
 import {DEMO_MODE} from '@/demo/demo.config';
+import {demoRecipientWallet} from '@/demo/demo.data';
 import {useEffect,useState} from 'react';
 import {router} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
@@ -14,7 +15,7 @@ type PaymentStage='idle'|'preparing'|'signing'|'submitting';
 
 export default function SendPayment(){
   const [account,setAccount]=useState<WalletAccount|null>(null);
-  const [destination,setDestination]=useState(DEMO_MODE?'Asado del viernes':'');
+  const [destination,setDestination]=useState(DEMO_MODE?demoRecipientWallet.address:'');
   const [amount,setAmount]=useState('10');
   const [assetCode,setAssetCode]=useState('XLM');
   const [stage,setStage]=useState<PaymentStage>('idle');
@@ -47,6 +48,7 @@ export default function SendPayment(){
           amount:submitted.amount,
           asset:submitted.assetCode,
           recipient:submitted.destination,
+          ...(DEMO_MODE?{recipientName:demoRecipientWallet.name}:{}),
         },
       });
     }catch(nextError){
@@ -72,8 +74,19 @@ export default function SendPayment(){
         <View style={styles.icon}><Ionicons name="paper-plane-outline" size={26} color={colors.yellow}/></View>
         <Text style={styles.title}>{DEMO_MODE?'Enviar pago':'Pago real en Testnet'}</Text>
         <Text style={styles.copy}>La passkey autoriza la operación. El bloqueo de la app no firma transacciones.</Text>
-        <Text style={styles.label}>DESTINO STELLAR</Text>
-        <TextInput autoCapitalize="characters" autoCorrect={false} editable={!busy} onChangeText={setDestination} placeholder="G… o C…" placeholderTextColor={colors.muted} style={styles.input} value={destination}/>
+        <Text style={styles.label}>{DEMO_MODE?'WALLET DESTINO':'DESTINO STELLAR'}</Text>
+        {DEMO_MODE?(
+          <View accessibilityLabel={`${demoRecipientWallet.name}, ${demoRecipientWallet.network}`} style={styles.walletCard}>
+            <View style={styles.walletIcon}><Ionicons name="wallet-outline" size={23} color={colors.yellow}/></View>
+            <View style={styles.walletCopy}>
+              <Text style={styles.walletName}>{demoRecipientWallet.name}</Text>
+              <Text numberOfLines={1} style={styles.walletMeta}>{demoRecipientWallet.network} · {demoRecipientWallet.address.slice(0,7)}…{demoRecipientWallet.address.slice(-5)}</Text>
+            </View>
+            <View style={styles.selectedIcon}><Ionicons name="checkmark" size={16} color={colors.bg}/></View>
+          </View>
+        ):(
+          <TextInput autoCapitalize="characters" autoCorrect={false} editable={!busy} onChangeText={setDestination} placeholder="G… o C…" placeholderTextColor={colors.muted} style={styles.input} value={destination}/>
+        )}
         <Text style={styles.label}>MONTO</Text>
         <View style={styles.amountRow}>
           <TextInput editable={!busy} keyboardType="decimal-pad" onChangeText={setAmount} style={[styles.input,styles.amountInput]} value={amount}/>
@@ -102,6 +115,12 @@ const styles=StyleSheet.create({
   copy:{...typography.caption,color:colors.muted,textAlign:'center',marginTop:spacing.xs,fontWeight:'400'},
   label:{fontSize:9,lineHeight:12,color:colors.muted,fontWeight:'900',letterSpacing:1,marginTop:spacing.md,marginBottom:spacing.xxs},
   input:{minHeight:52,borderRadius:radius.md,backgroundColor:colors.bgSoft,borderWidth:1,borderColor:colors.border,color:colors.text,paddingHorizontal:spacing.sm,...typography.body},
+  walletCard:{minHeight:68,borderRadius:radius.md,backgroundColor:colors.bgSoft,borderWidth:1,borderColor:colors.blueBright,padding:spacing.sm,flexDirection:'row',alignItems:'center',gap:spacing.sm},
+  walletIcon:{width:42,height:42,borderRadius:radius.sm,backgroundColor:colors.surface2,alignItems:'center',justifyContent:'center'},
+  walletCopy:{flex:1},
+  walletName:{...typography.bodyStrong,color:colors.text},
+  walletMeta:{...typography.caption,color:colors.muted,marginTop:2,fontWeight:'400'},
+  selectedIcon:{width:24,height:24,borderRadius:radius.pill,backgroundColor:colors.success,alignItems:'center',justifyContent:'center'},
   amountRow:{flexDirection:'row',alignItems:'center',gap:spacing.sm},
   amountInput:{flex:1,fontSize:24,fontWeight:'800'},
   asset:{...typography.bodyStrong,color:colors.yellow,minWidth:50},

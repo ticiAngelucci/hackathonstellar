@@ -1,7 +1,7 @@
 import {Api} from '@stellar/stellar-sdk/rpc';
 import {getRpcClient} from '@/services/stellar/stellar.client';
 import {stellarNetwork,transactionExplorerUrl} from '@/services/stellar/stellar.network';
-import {getRelayerAuthHeaders} from '@/services/supabaseAuth';
+import {getRelayerAuthHeaders} from './stellar.auth';
 
 export type RelayerSubmission={
   txHash:string;

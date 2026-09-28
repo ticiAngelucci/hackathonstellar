@@ -6,7 +6,8 @@ import {Screen} from './Screen';
 import {AppHeader} from './AppHeader';
 import {PrimaryButton} from './PrimaryButton';
 import {demoPaymentService,PAYMENT_STEPS} from '@/services/demo/demo-payment.service';
-import {demoPolicyService,paymentDecision} from '@/services/demo/demo-policy.service';
+import {paymentDecision} from '@/repositories/demo/policy.repository';
+import {policyService} from '@/services/policies/policy.service';
 import {readDemoState} from '@/demo/demo.controller';
 import type {DemoRequest} from '@/demo/demo.types';
 import {colors,spacing,radius,typography} from '@/constants/theme';
@@ -32,17 +33,24 @@ export function PaymentRequestFlow(){
   }catch{if(mounted.current){setMessage('Tu saldo no alcanza para este pago.');setStep(-1);}}
   finally{busy.current=false;}
  };
+ const reject=async(r:DemoRequest)=>{
+  if(busy.current)return;busy.current=true;setMessage('');
+  try{await demoPaymentService.reject(r.id);if(mounted.current)router.replace('/(tabs)');}
+  catch{if(mounted.current)setMessage('No pudimos rechazar la solicitud. Probá nuevamente.');}
+  finally{busy.current=false;}
+ };
  useEffect(()=>{
   mounted.current=true;let active=true;
   const initialize=async()=>{
    const r=(id?await demoPaymentService.get(id):undefined)??await demoPaymentService.create(scenario==='auto'?3:scenario==='blocked'?100:10);
-   const state=await readDemoState();const policy=await demoPolicyService.get();
+   const state=await readDemoState();const policy=await policyService.get();
    const choice=paymentDecision(policy,r.amount,state.spent);
    if(!active)return;setRequest(r);setDecision(choice);
    if(choice==='auto')void pay(r,false);
-   if(choice==='blocked')void demoPaymentService.block(r.id);
+   if(choice==='blocked')await demoPaymentService.block(r.id);
   };
-  void initialize();return ()=>{active=false;mounted.current=false;};
+  void initialize().catch(()=>{if(active&&mounted.current){setMessage('No pudimos preparar la solicitud. Probá nuevamente.');setStep(-1);}});
+  return ()=>{active=false;mounted.current=false;};
  },[id,scenario]);
  const processing=step>=0;
  const blocked=decision==='blocked';
@@ -57,7 +65,7 @@ export function PaymentRequestFlow(){
    {processing&&<><Animated.Text key={step} entering={FadeInDown.duration(180)} style={styles.status}>{decision==='auto'&&step===1?'3 USDC está dentro de tu límite.':PAYMENT_STEPS[step].text}</Animated.Text><View style={styles.dots}>{PAYMENT_STEPS.map((_,i)=><View key={i} style={[styles.dot,{backgroundColor:i<=step?colors.yellow:colors.border}]}/>)}</View></>}
    {!!message&&<Text style={styles.copy}>{message}</Text>}
   </Animated.View>
-  <View style={styles.actions}>{!processing&&!done&&!blocked&&!message&&request&&decision==='approval'&&<><PrimaryButton title="Aprobar y pagar" onPress={()=>void pay(request,true)}/><PrimaryButton variant="secondary" title="Rechazar" onPress={()=>{if(busy.current)return;busy.current=true;void demoPaymentService.reject(request.id).then(()=>router.replace('/(tabs)'));}}/></>}
+  <View style={styles.actions}>{!processing&&!done&&!blocked&&!message&&request&&decision==='approval'&&<><PrimaryButton title="Aprobar y pagar" onPress={()=>void pay(request,true)}/><PrimaryButton variant="secondary" title="Rechazar" onPress={()=>void reject(request)}/></>}
   {!processing&&(done||blocked||!!message)&&<PrimaryButton title="Volver al inicio" onPress={()=>router.replace('/(tabs)')}/>}</View>
  </Screen>;
 }

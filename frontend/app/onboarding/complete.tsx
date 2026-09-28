@@ -1,7 +1,6 @@
-import {subscriptionService} from '@/services/appDataService';
+import {subscriptionService} from '@/services/services/automatic-services.service';
 import {profileService} from '@/services/users/profile.service';
-import {profileRepository} from '@/repositories/profile.repository';
-import {requireUserId} from '@/services/auth/auth.service';
+import {walletMetadataService} from '@/services/wallet/wallet-metadata.service';
 import {queryClient} from '@/lib/query-client';
 import {userMessage} from '@/lib/errors';
 import {DEMO_MODE} from '@/demo/demo.config';
@@ -43,7 +42,7 @@ export default function Complete(){
       if(!DEMO_MODE){
         await profileService.updateProfile({displayName:profile.displayName,username:profile.username,notificationsEnabled:profile.notificationsEnabled});
         const account=await walletService.getAccount();
-        if(account)await profileRepository.saveWallet(await requireUserId(),account);
+        if(account)await walletMetadataService.registerAccount(account);
         for(const serviceId of profile.enabledServiceIds??[])await subscriptionService.set(serviceId,true);
         await queryClient.invalidateQueries({queryKey:['profile']});
       }

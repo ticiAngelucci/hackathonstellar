@@ -1,6 +1,10 @@
 export type UserProfile={id:string;displayName:string;username:string;notificationsEnabled:boolean};
+export type PublicProfile={id:string;displayName:string;username:string};
 export type PublicWallet={id:string;address:string;network:string;status:string};
 export type ProfileUpdate=Pick<UserProfile,'displayName'|'username'|'notificationsEnabled'>;
+
+export type EventParticipant={user_id:string;display_name:string};
+export type PatoPayEvent={id:string;name:string;creator_id:string;status:'draft';created_at:string;participants:EventParticipant[];balance?:number;membersVisible?:boolean;version?:number};
 
 export type PaymentRequestStatus='pending'|'approved'|'processing'|'paid'|'rejected'|'blocked'|'failed'|'expired'|'cancelled';
 export type PaymentRequest={id:string;requesterId:string;payerId:string;assetId:string;amount:string;asset:string;concept:string;status:PaymentRequestStatus;createdAt?:string;updatedAt?:string;version?:number;txHash?:string};

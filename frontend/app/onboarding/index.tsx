@@ -1,4 +1,5 @@
-import {subscriptionService,policyService,defaultPaymentPolicy} from '@/services/appDataService';
+import {subscriptionService} from '@/services/services/automatic-services.service';
+import {policyService} from '@/services/policies/policy.service';
 import {demoStakingService} from '@/services/demo/demo-staking.service';
 import {DEMO_MODE} from '@/demo/demo.config';
 import {useState} from 'react';
@@ -25,10 +26,35 @@ export default function EducationFlow(){
   const [paymentDecision,setPaymentDecision]=useState<PaymentDecision>(null);
   const compact=height<720;
 
+  const runDemoMutation=(label:string,mutation:()=>Promise<unknown>)=>{
+    if(!DEMO_MODE)return;
+    void Promise.resolve().then(mutation).catch(error=>{if(__DEV__)console.warn(`[Demo] ${label} failed.`,error);});
+  };
+
   const toggleService=(id:string)=>{
-    if(DEMO_MODE)void subscriptionService.set(id,!enabledServices.includes(id));
-    const next=enabledServices.includes(id)?enabledServices.filter(item=>item!==id):[...enabledServices,id];
+    const enabled=!enabledServices.includes(id);
+    runDemoMutation('service update',()=>subscriptionService.set(id,enabled));
+    const next=enabled?[...enabledServices,id]:enabledServices.filter(item=>item!==id);
     setEnabledServices(next);updateProfile({enabledServiceIds:next});
+  };
+
+  const selectPolicy=(policyPreset:typeof profile.policyPreset)=>{
+    updateProfile({policyPreset});
+    runDemoMutation('policy update',async()=>{
+      const current=await policyService.get();
+      const autoPayLimit=policyPreset==='safe'?0:5;
+      const minorLimits=current.minorLimits??{
+        auto:String(Math.round(current.autoPayLimit*10_000_000)),
+        approval:String(Math.round(current.approvalLimit*10_000_000)),
+        daily:String(Math.round(current.dailyLimit*10_000_000)),
+      };
+      await policyService.save({
+        ...current,
+        version:current.version??1,
+        autoPayLimit,
+        minorLimits:{...minorLimits,auto:String(Math.round(autoPayLimit*10_000_000))},
+      });
+    });
   };
 
   const patoVariant=step===1?'hero':step===3||step===6?(paymentDecision==='paid'?'success':'approval'):'agent';
@@ -37,10 +63,10 @@ export default function EducationFlow(){
   const content=()=>{
     switch(step){
       case 1:return <WelcomeStep/>;
-      case 2:return <BalanceStep active={stakingActive} onActivate={()=>{setStakingActive(true);if(DEMO_MODE)void demoStakingService.activate();}}/>;
+      case 2:return <BalanceStep active={stakingActive} onActivate={()=>{setStakingActive(true);runDemoMutation('staking update',()=>demoStakingService.activate());}}/>;
       case 3:return <SharedFundStep selected={fundChoice} onSelect={setFundChoice}/>;
       case 4:return <ServicesStep enabled={enabledServices} onToggle={toggleService}/>;
-      case 5:return <PermissionsStep selected={profile.policyPreset} onSelect={policyPreset=>{updateProfile({policyPreset});if(DEMO_MODE)void policyService.save({...defaultPaymentPolicy,autoPayLimit:policyPreset==='safe'?0:5});}}/>;
+      case 5:return <PermissionsStep selected={profile.policyPreset} onSelect={selectPolicy}/>;
       default:return <PaymentExampleStep decision={paymentDecision}/>;
     }
   };
