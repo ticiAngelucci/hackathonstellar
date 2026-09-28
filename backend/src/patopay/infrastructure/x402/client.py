@@ -1,25 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
-
-@dataclass(frozen=True, slots=True)
-class VerificationResult:
-    is_valid: bool
-    payer: str | None = None
-    invalid_reason: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SettlementResult:
-    success: bool
-    transaction: str | None = None
-    network: str | None = None
-    payer: str | None = None
-    error_reason: str | None = None
+from patopay.application.ports.x402 import SettlementResult, VerificationResult
 
 
 class AmbiguousSettlementError(RuntimeError):
